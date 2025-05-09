@@ -6,7 +6,7 @@ from visualize.format_sequences import format_joint_sequences
 from visualize.vis_utils import npy2obj
 
 # Load the pickle file
-with open('sample_41_seq_0_test.pkl', 'rb') as f:
+with open('data/sample_41_seq_0_test.pkl', 'rb') as f:
 # with open('SMPL/mano/MANO_LEFT.pkl', 'rb') as f:
     # Try loading with Python 2 compatibility
     data = pickle.load(f, encoding='latin1')
@@ -31,7 +31,7 @@ os.makedirs(os.path.join(output_dir, "loc"), exist_ok=True)
 
 # Load the npy file and convert to obj
 converter = npy2obj(output_path, sample_idx=0, rep_idx=0, device=0, cuda=True)
-num_frames = converter.real_num_frames
+num_frames = converter.num_frames
 
 # Convert each frame to obj
 for frame_i in range(num_frames):

@@ -550,3 +550,48 @@ def matrix_to_rotation_6d(matrix: torch.Tensor) -> torch.Tensor:
     Retrieved from http://arxiv.org/abs/1812.07035
     """
     return matrix[..., :2, :].clone().reshape(*matrix.size()[:-2], 6)
+
+def matrix_slerp(matrix1: torch.Tensor, matrix2: torch.Tensor, t: float) -> torch.Tensor:
+    """
+    Performs spherical linear interpolation (SLERP) between two rotation matrices.
+    
+    Args:
+        matrix1: First rotation matrix of shape (..., 3, 3)
+        matrix2: Second rotation matrix of shape (..., 3, 3) 
+        t: Interpolation weight between [0,1], scalar value
+
+    Returns:
+        Interpolated rotation matrix of shape (..., 3, 3)
+    """
+    # Convert matrices to quaternions
+    quat1 = matrix_to_quaternion(matrix1)
+    quat2 = matrix_to_quaternion(matrix2)
+    
+    # Calculate dot product between quaternions
+    dot = (quat1 * quat2).sum(-1, keepdim=True)
+    
+    # If dot product is negative, flip second quaternion
+    # This ensures we take the shortest path
+    quat2 = torch.where(dot < 0, -quat2, quat2)
+    dot = torch.where(dot < 0, -dot, dot)
+    
+    # If quaternions are very close, linearly interpolate
+    DOT_THRESHOLD = 0.9995
+    linear_interp = dot > DOT_THRESHOLD
+    
+    if linear_interp.any():
+        # Linear interpolation
+        result = quat1 + t * (quat2 - quat1)
+        result = F.normalize(result, dim=-1)
+    else:
+        # Spherical interpolation
+        theta = torch.acos(dot.clamp(-1, 1))
+        sin_theta = torch.sin(theta)
+        
+        s1 = torch.sin((1.0 - t) * theta) / sin_theta
+        s2 = torch.sin(t * theta) / sin_theta
+        
+        result = s1 * quat1 + s2 * quat2
+    
+    # Convert interpolated quaternion back to matrix
+    return quaternion_to_matrix(result)

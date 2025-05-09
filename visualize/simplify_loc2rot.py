@@ -22,14 +22,14 @@ class joints2smpl:
         self.fix_foot = False
         print(config.SMPL_MODEL_DIR)
         
-        left_hand_pose = torch.Tensor([ 0.1117,  0.0429, -0.4164,  0.1088, -0.0660, -0.7562, -0.0964, -0.0909,
+        right_hand_pose = torch.Tensor([ 0.1117,  0.0429, -0.4164,  0.1088, -0.0660, -0.7562, -0.0964, -0.0909,
         -0.1885, -0.1181,  0.0509, -0.5296, -0.1437,  0.0552, -0.7049, -0.0192,
         -0.0923, -0.3379, -0.4570, -0.1963, -0.6255, -0.2147, -0.0660, -0.5069,
         -0.3697, -0.0603, -0.0795, -0.1419, -0.0859, -0.6355, -0.3033, -0.0579,
         -0.6314, -0.1761, -0.1321, -0.3734,  0.8510,  0.2769, -0.0915, -0.4998,
          0.0266,  0.0529,  0.5356,  0.0460, -0.2774])
         
-        right_hand_pose = torch.Tensor([0.1117, -0.0429,  0.4164,  0.1088,  0.0660,  0.7562, -0.0964,  0.0909,
+        left_hand_pose = torch.Tensor([0.1117, -0.0429,  0.4164,  0.1088,  0.0660,  0.7562, -0.0964,  0.0909,
          0.1885, -0.1181, -0.0509,  0.5296, -0.1437, -0.0552,  0.7049, -0.0192,
          0.0923,  0.3379, -0.4570,  0.1963,  0.6255, -0.2147,  0.0660,  0.5069,
         -0.3697,  0.0603,  0.0795, -0.1419,  0.0859,  0.6355, -0.3033,  0.0579,
@@ -55,25 +55,6 @@ class joints2smpl:
                             joints_category=self.joint_category,
                             num_iters=self.num_smplify_iters,
                             device=self.device)
-
-
-    def npy2smpl(self, npy_path):
-        out_path = npy_path.replace('.npy', '_rot.npy')
-        motions = np.load(npy_path, allow_pickle=True)[None][0]
-        # print_batch('', motions)
-        n_samples = motions['motion'].shape[0]
-        all_thetas = []
-        for sample_i in tqdm(range(n_samples)):
-            thetas, _ = self.joint2smpl(motions['motion'][sample_i].transpose(2, 0, 1))  # [nframes, njoints, 3]
-            all_thetas.append(thetas.cpu().numpy())
-        motions['motion'] = np.concatenate(all_thetas, axis=0)
-        print('motions', motions['motion'].shape)
-
-        print(f'Saving [{out_path}]')
-        np.save(out_path, motions)
-        exit()
-
-
 
     def joint2smpl(self, input_joints, init_params=None):
         _smplify = self.smplify # if init_params is None else self.smplify_fast
@@ -125,22 +106,5 @@ class joints2smpl:
         root_loc = torch.tensor(keypoints_3d[:, 0])  # [bs, 3]
         root_loc = torch.cat([root_loc, torch.zeros_like(root_loc)], dim=-1).unsqueeze(1)  # [bs, 1, 6]
         thetas = torch.cat([thetas, root_loc], dim=1).unsqueeze(0).permute(0, 2, 3, 1)  # [1, 25, 6, 196]
-
+        
         return thetas.clone().detach(), {'pose': new_opt_joints[0, :24].flatten().clone().detach(), 'betas': new_opt_betas.clone().detach(), 'cam': new_opt_cam_t.clone().detach()}
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_path", type=str, required=True, help='Blender file or dir with blender files')
-    parser.add_argument("--cuda", type=bool, default=True, help='')
-    parser.add_argument("--device", type=int, default=0, help='')
-    params = parser.parse_args()
-
-    simplify = joints2smpl(device_id=params.device, cuda=params.cuda)
-
-    if os.path.isfile(params.input_path) and params.input_path.endswith('.npy'):
-        simplify.npy2smpl(params.input_path)
-    elif os.path.isdir(params.input_path):
-        files = [os.path.join(params.input_path, f) for f in os.listdir(params.input_path) if f.endswith('.npy')]
-        for f in files:
-            simplify.npy2smpl(f)
