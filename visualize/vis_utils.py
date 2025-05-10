@@ -15,7 +15,6 @@ class npy2obj:
         self.rot2xyz = Rotation2xyz(device='cpu')
         self.faces = self.rot2xyz.smpl_model.faces
         self.bs, self.njoints, self.nfeats, self.nframes = motion.shape
-        self.opt_cache = {}
         self.sample_idx = sample_idx
         self.total_num_samples = motion_dict['num_samples']
         self.rep_idx = rep_idx
@@ -23,16 +22,14 @@ class npy2obj:
         self.num_frames = motion[self.absl_idx].shape[-1]
         self.j2s = joints2smpl(num_frames=self.num_frames, device_id=device, cuda=cuda)
 
-        if self.nfeats == 3:
-            print(f'Running SMPLify For sample [{sample_idx}], repetition [{rep_idx}], it may take a few minutes.')
-            motion_tensor, opt_dict = self.j2s.joint2smpl(motion[self.absl_idx].transpose(2, 0, 1))  # [nframes, njoints, 3]
-            # motion = motion_tensor.cpu().numpy()
-            motion = self.interpolate_motions(motion_tensor, interpolate).cpu().numpy()
-            self.num_frames = motion.shape[-1]
-            
-        elif self.nfeats == 6:
-            motion = motion[[self.absl_idx]]
-            
+        assert self.nfeats == 3
+        
+        print(f'Running SMPLify For sample [{sample_idx}], repetition [{rep_idx}], it may take a few minutes.')
+        motion_tensor, opt_dict = self.j2s.joint2smpl(motion[self.absl_idx].transpose(2, 0, 1))  # [nframes, njoints, 3]
+        self.opt_dict = opt_dict
+        
+        motion = self.preprocess_motion(motion_tensor, opt_dict['cam'], interpolate).cpu().numpy()
+        self.num_frames = motion.shape[-1]
         
         self.bs, self.njoints, self.nfeats, self.nframes = motion.shape
         self.real_num_frames = motion_dict['lengths'][self.absl_idx] # 196
@@ -42,7 +39,6 @@ class npy2obj:
                                      jointstype='vertices',
                                      # jointstype='smpl',  # for joint locations
                                      vertstrans=True)
-        self.root_loc = motion[:, -1, :3, :].reshape(1, 1, 3, -1)
 
     def get_vertices(self, sample_i, frame_i, offset=None):
         if offset is not None:
@@ -70,9 +66,11 @@ class npy2obj:
         #     ground_sph_mesh.export(fw, 'obj')
         return save_path     
     
-    def interpolate_motions(self, motion_tensor, interpolate):
-        root_loc = motion_tensor[:, -1, :6, :].reshape(1, 1, 6, -1)
+    def preprocess_motion(self, motion_tensor, cam, interpolate):
+        # Reshape motion tensor with permute to maintain correct order
         thetas = motion_tensor[:, :24, :6, :].reshape(1, 24, 6, -1)
+        root_loc = torch.cat([cam, torch.zeros_like(cam)], dim=2) # n*1*6
+        root_loc = root_loc.permute(1, 2, 0).reshape(1, 1, 6, -1) # 1*1*6*n
         
         n_frames = thetas.shape[-1]
         total_frames = int((n_frames - 1) * interpolate + 1)

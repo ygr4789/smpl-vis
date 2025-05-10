@@ -4,7 +4,9 @@ import numpy as np
 from visualize.format_sequences import format_joint_sequences
 from visualize.vis_utils import npy2obj
 from visualize.interpolate import interpolate
-import matplotlib.pyplot as plt
+from visualize.vis_configs import trans_offset
+from visualize.plot import plot_joints, plot_trajectories
+
 import argparse
 
 def parse_args():
@@ -25,18 +27,14 @@ def load_data(data_file):
     p2_jnts = data['full_refine_pred_p2_20fps_jnts_list']
     obj_verts_list = data['filtered_obj_verts_list']
     obj_faces_list = data['obj_faces_list']
-    p1_trans = data['pred_p1_trans_list']
-    p2_trans = data['pred_p2_trans_list']
 
     print("Original shapes:")
     print(f"p1_jnts: {p1_jnts.shape}")
     print(f"p2_jnts: {p2_jnts.shape}")
-    print(f"p1_trans: {p1_trans.shape}")
-    print(f"p2_trans: {p2_trans.shape}")
     print(f"obj_verts_list: {obj_verts_list.shape}")
     print(f"obj_faces_list: {obj_faces_list.shape}")
 
-    return p1_jnts, p2_jnts, obj_verts_list, obj_faces_list, p1_trans, p2_trans
+    return p1_jnts, p2_jnts, obj_verts_list, obj_faces_list
 
 def setup_directories():
     """Create necessary output directories"""
@@ -71,58 +69,14 @@ def get_converters(data_dict, data_file):
             
     return converter1, converter2
 
-def calculate_offsets(conv1_root_pos, conv2_root_pos, p1_trans, p2_trans):
-    """Calculate translation offsets between trajectories"""
-    conv1_pos = conv1_root_pos[0, 0].T
-    conv2_pos = conv2_root_pos[0, 0].T
-    
-    p1_pos = p1_trans[:-30].cpu().numpy()
-    p2_pos = p2_trans[:-30].cpu().numpy()
-
-    min_frames = min(len(conv1_pos), len(p1_pos))
-    t_target = np.linspace(0, 1, min_frames)
-    
-    t_source = np.linspace(0, 1, len(conv1_pos))
-    conv1_interp = np.array([np.interp(t_target, t_source, conv1_pos[:, i]) for i in range(3)]).T
-    conv2_interp = np.array([np.interp(t_target, t_source, conv2_pos[:, i]) for i in range(3)]).T
-
-    t_source = np.linspace(0, 1, len(p1_pos))
-    p1_interp = np.array([np.interp(t_target, t_source, p1_pos[:, i]) for i in range(3)]).T
-    p2_interp = np.array([np.interp(t_target, t_source, p2_pos[:, i]) for i in range(3)]).T
-
-    trans_offset1 = np.mean(p1_interp - conv1_interp, axis=0)
-    trans_offset2 = np.mean(p2_interp - conv2_interp, axis=0)
-    
-    return trans_offset1, trans_offset2, conv1_pos, conv2_pos, p1_pos, p2_pos
-
-def visualize_trajectories(conv1_pos, conv2_pos, p1_pos, p2_pos, trans_offset1, trans_offset2):
-    """Create 3D visualization of trajectories"""
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.plot(conv1_pos[:, 0], conv1_pos[:, 2], conv1_pos[:, 1], 'b-', label='SMPL Root Position 1')
-    ax.plot(conv2_pos[:, 0], conv2_pos[:, 2], conv2_pos[:, 1], 'b--', label='SMPL Root Position 2')
-    ax.plot(p1_pos[:, 0], p1_pos[:, 2], p1_pos[:, 1], 'r-', label='Original Translation 1')
-    ax.plot(p2_pos[:, 0], p2_pos[:, 2], p2_pos[:, 1], 'r--', label='Original Translation 2')
-    ax.plot(conv1_pos[:, 0] + trans_offset1[0], conv1_pos[:, 2] + trans_offset1[2], conv1_pos[:, 1] + trans_offset1[1], 'g-', label='Aligned SMPL Root Position 1')
-    ax.plot(conv2_pos[:, 0] + trans_offset2[0], conv2_pos[:, 2] + trans_offset2[2], conv2_pos[:, 1] + trans_offset2[1], 'g--', label='Aligned SMPL Root Position 2')
-
-    ax.set_xlabel('X Position')
-    ax.set_ylabel('Z Position')
-    ax.set_zlabel('Y Position') 
-    ax.set_title('3D View of Trajectories')
-    ax.legend()
-    ax.set_box_aspect([1,1,1])
-    plt.show()
-
-def save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, interpolator, trans_offset1, trans_offset2):
+def save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, interpolator, trans_offset=None):
     """Save obj files for each frame"""
     for frame_i in range(num_frames):
         obj_path = os.path.join(output_dir, p1_dir, f"frame_{frame_i:04d}.obj")
-        converter1.save_obj(obj_path, frame_i, offset=trans_offset1)
+        converter1.save_obj(obj_path, frame_i, offset=trans_offset)
         
         obj_path = os.path.join(output_dir, p2_dir, f"frame_{frame_i:04d}.obj")
-        converter2.save_obj(obj_path, frame_i, offset=trans_offset2)
+        converter2.save_obj(obj_path, frame_i, offset=trans_offset)
         
         obj_path = os.path.join(output_dir, obj_dir, f"frame_{frame_i:04d}.obj")
         interpolator.save_frame_obj(frame_i, obj_path)
@@ -133,7 +87,10 @@ def main():
     data_file = args.data_file
 
     # Load data
-    p1_jnts, p2_jnts, obj_verts_list, obj_faces_list, p1_trans, p2_trans = load_data(data_file)
+    p1_jnts, p2_jnts, obj_verts_list, obj_faces_list = load_data(data_file)
+    
+    # plot_joints(p1_jnts, p2_jnts)
+    # return
     
     # Format sequences
     data_dict = format_joint_sequences(p1_jnts, p2_jnts)
@@ -145,15 +102,7 @@ def main():
     # Setup interpolator
     interpolator = interpolate(obj_verts_list, obj_faces_list, interpolate=2.0)
     
-    # Calculate offsets
-    trans_offset1, trans_offset2, conv1_pos, conv2_pos, p1_pos, p2_pos = calculate_offsets(
-        converter1.root_loc, converter2.root_loc, p1_trans, p2_trans
-    )
-    
-    # visualize_trajectories(conv1_pos, conv2_pos, p1_pos, p2_pos, trans_offset1, trans_offset2)
-    
-    save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, converter1.num_frames, 
-                  converter1, converter2, interpolator, trans_offset1, trans_offset2)
+    save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, converter1.num_frames, converter1, converter2, interpolator)
 
 if __name__ == "__main__":
     main()
