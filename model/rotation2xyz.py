@@ -67,7 +67,7 @@ class Rotation2xyz:
 
         # get the desirable joints
         joints = out[jointstype]
-
+        
         x_xyz = torch.empty(nsamples, time, joints.shape[1], 3, device=x.device, dtype=x.dtype)
         x_xyz[~mask] = 0
         x_xyz[mask] = joints
@@ -81,7 +81,7 @@ class Rotation2xyz:
 
         if translation and vertstrans:
             # the first translation root at the origin
-            x_translations = x_translations - x_translations[:, :, [0]]
+            # x_translations = x_translations - x_translations[:, :, [0]]
 
             # add the translation to all the joints
             x_xyz = x_xyz + x_translations[:, None, :, :]
