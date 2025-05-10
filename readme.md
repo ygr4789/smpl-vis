@@ -1,7 +1,7 @@
 ## Instruction
 Create a micromamba env with the following command
 ```
-micromamba env create -n newenv -f env.yaml
+micromamba env create -n newenv -f prepare/env.yaml
 ```
 
 Prepare model files

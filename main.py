@@ -90,7 +90,6 @@ def main():
     p1_jnts, p2_jnts, obj_verts_list, obj_faces_list = load_data(data_file)
     
     # plot_joints(p1_jnts, p2_jnts)
-    # return
     
     # Format sequences
     data_dict = format_joint_sequences(p1_jnts, p2_jnts)
