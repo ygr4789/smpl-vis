@@ -5,8 +5,18 @@ from visualize.format_sequences import format_joint_sequences
 from visualize.vis_utils import npy2obj
 from visualize.interpolate import interpolate
 
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Process motion data file')
+    parser.add_argument('data_file', type=str, help='Path to the data file')
+    return parser.parse_args()
+
+args = parse_args()
+data_file = args.data_file
+
 # Load the pickle file
-with open('data/sample_41_seq_0_test.pkl', 'rb') as f:
+with open(data_file, 'rb') as f:
 # with open('SMPL/mano/MANO_LEFT.pkl', 'rb') as f:
     # Try loading with Python 2 compatibility
     data = pickle.load(f, encoding='latin1')
@@ -47,7 +57,7 @@ os.makedirs(os.path.join(output_dir, obj_dir), exist_ok=True)
 
 # Load the npy file and convert to obj
 cache_dir = "cache"
-cache_file = os.path.join(cache_dir, "converters.pkl")
+cache_file = os.path.join(cache_dir, data_file.split('/')[-1].split('.')[0] + "_converters.pkl")
 
 if os.path.exists(cache_file):
     with open(cache_file, 'rb') as f:
