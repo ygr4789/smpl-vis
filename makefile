@@ -1,8 +1,9 @@
+SMPL_SCRIPT := main.py
+RENDER_SCRIPT := blender/seq.py
 DATA_DIR := data
 OUTPUT_DIR := output
 CACHE_DIR := cache
-SCRIPT := main.py
-RENDER_SCRIPT := blender/seq.py
+RESULT_DIR := video
 
 # Extract base names from .pkl files
 BASE_NAMES := $(basename $(notdir $(wildcard $(DATA_DIR)/*.pkl)))
@@ -16,7 +17,7 @@ all: $(RENDERED)
 # Rule: run main.py if .pkl is newer than output dir
 $(OUTPUT_DIR)/%: $(DATA_DIR)/%.pkl
 	@echo "Generating $@ from $<"
-	python $(SCRIPT) $<
+	python $(SMPL_SCRIPT) $<
 
 # Rule: run rendering only if previous step succeeded 
 $(OUTPUT_DIR)/%/.rendered: $(OUTPUT_DIR)/%
@@ -38,6 +39,6 @@ clean:
 # Clean only .rendered files
 clean-rendered:
 	rm -f $(OUTPUT_DIR)/*/.rendered
-
+	
 mrproper: clean
-	rm -rf $(RENDER_SCRIPT)
+	rm -rf $(RESULT_DIR)/*
