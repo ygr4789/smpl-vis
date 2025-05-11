@@ -6,6 +6,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('obj_folder', type=str, help='Path to obj output folder')
+parser.add_argument('-l', '--low', action='store_true', help='Use low quality fast rendering settings')
 args = parser.parse_args()
 
 obj_folder = args.obj_folder
@@ -24,11 +25,39 @@ bpy.context.scene.render.ffmpeg.format = 'MPEG4'
 bpy.context.scene.render.ffmpeg.codec = 'H264'
 bpy.context.scene.render.filepath = video_path
 
-# Reduce Cycles render samples for faster rendering
-bpy.context.scene.cycles.samples = 256  # Consider reducing further if first sample is too slow
-bpy.context.scene.cycles.use_denoising = True
-bpy.context.scene.cycles.use_adaptive_sampling = True  
-bpy.context.scene.cycles.adaptive_threshold = 0.1
+if args.low:
+    # Use Eevee for fast rendering
+    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+    # Reduce quality settings
+    bpy.context.scene.eevee.taa_render_samples = 16
+    bpy.context.scene.eevee.use_soft_shadows = False
+    bpy.context.scene.eevee.use_bloom = False
+    bpy.context.scene.eevee.use_ssr = False
+    bpy.context.scene.eevee.use_ssr_refraction = False
+    # Reduce output resolution
+    bpy.context.scene.render.resolution_x = 1280
+    bpy.context.scene.render.resolution_y = 720
+    bpy.context.scene.render.resolution_percentage = 50
+    # Use view layer directly
+    bpy.context.scene.use_nodes = False
+    # Disable compositing
+    bpy.context.scene.render.use_compositing = False
+    bpy.context.scene.render.use_sequencer = False
+else:
+    # Use Cycles with normal settings
+    bpy.context.scene.render.engine = 'CYCLES'
+    bpy.context.scene.cycles.samples = 256
+    bpy.context.scene.cycles.use_denoising = True
+    bpy.context.scene.cycles.use_adaptive_sampling = True
+    bpy.context.scene.cycles.adaptive_threshold = 0.1
+    # Full resolution
+    bpy.context.scene.render.resolution_x = 1920
+    bpy.context.scene.render.resolution_y = 1080
+    bpy.context.scene.render.resolution_percentage = 100
+    # Enable compositing for high quality
+    bpy.context.scene.use_nodes = True
+    bpy.context.scene.render.use_compositing = True
+    bpy.context.scene.render.use_sequencer = True
 
 # Set frame rate to 30fps
 bpy.context.scene.render.fps = 30

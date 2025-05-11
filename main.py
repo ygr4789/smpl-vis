@@ -19,20 +19,10 @@ def load_data(data_file):
     with open(data_file, 'rb') as f:
         data = pickle.load(f, encoding='latin1')
         
-    print("Data keys:")
-    for key in data.keys():
-        print(f"- {key}")
-        
     p1_jnts = data['full_refine_pred_p1_20fps_jnts_list']
     p2_jnts = data['full_refine_pred_p2_20fps_jnts_list']
     obj_verts_list = data['filtered_obj_verts_list']
     obj_faces_list = data['obj_faces_list']
-
-    print("Original shapes:")
-    print(f"p1_jnts: {p1_jnts.shape}")
-    print(f"p2_jnts: {p2_jnts.shape}")
-    print(f"obj_verts_list: {obj_verts_list.shape}")
-    print(f"obj_faces_list: {obj_faces_list.shape}")
 
     return p1_jnts, p2_jnts, obj_verts_list, obj_faces_list
 

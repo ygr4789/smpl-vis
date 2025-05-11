@@ -11,12 +11,17 @@ bash prepare/download_smpl_files.sh
 ```
 
 ## Instruction
-Executing the file creates output in obj_output
+This command will create `.obj` files in the `output/sample` folder.
 ```
-python main.py [pkl_file_dir]
+python main.py data/sample.pkl
 ```
 
-Render an OBJ Sequence as an Animation in Blender
+Render an `.obj` sequence as an animation in Blender. This command generates `video/sample.mp4`. `-l` flag will render low-quality results at high speeds.
+
 ```
-Run the script in `blender/seq.blend`
+python blender/seq.py output/sample [-l]
+```
+You can use a makefile to render all the files in the `data` at once. This is rendered in low quality. You can render your favorite ones separately later with the above command.
+```
+make
 ```
