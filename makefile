@@ -1,29 +1,37 @@
-# Define paths
 DATA_DIR := data
 OUTPUT_DIR := output
+CACHE_DIR := cache
 SCRIPT := main.py
 RENDER_SCRIPT := blender/seq.py
 
-# Get list of base names (sample1, sample2)
+# Extract base names from .pkl files
 BASE_NAMES := $(basename $(notdir $(wildcard $(DATA_DIR)/*.pkl)))
 
-# Final target list
-RENDERED_TARGETS := $(addprefix $(OUTPUT_DIR)/, $(addsuffix /.rendered, $(BASE_NAMES)))
+# Targets like output/sample1/.rendered
+RENDERED := $(addprefix $(OUTPUT_DIR)/, $(addsuffix /.rendered, $(BASE_NAMES)))
 
-# Default goal
-all: $(RENDERED_TARGETS)
+# Default target
+all: $(RENDERED)
 
-# Rule to run main.py and create output directory
-$(OUTPUT_DIR)/%/.rendered:
-	@name=$*; \
-	echo "Running python $(SCRIPT) $(DATA_DIR)/$$name.pkl"; \
-	python $(SCRIPT) $(DATA_DIR)/$$name.pkl; \
-	echo "Rendering with python $(RENDER_SCRIPT) $(OUTPUT_DIR)/$$name"; \
-	python $(RENDER_SCRIPT) $(OUTPUT_DIR)/$$name -l; \
+# Rule: run main.py if .pkl is newer than output dir
+$(OUTPUT_DIR)/%: $(DATA_DIR)/%.pkl
+	@echo "Generating $@ from $<"
+	python $(SCRIPT) $<
+
+# Rule: run rendering only if previous step succeeded
+$(OUTPUT_DIR)/%/.rendered: $(OUTPUT_DIR)/%
+	@echo "Rendering $*"
+	python $(RENDER_SCRIPT) $(OUTPUT_DIR)/$* -l
 	touch $@
 
-# Clean all generated output
+# Clean all outputs
 clean:
 	rm -rf $(OUTPUT_DIR)/*
 	rm -rf $(CACHE_DIR)/*
 	
+# Clean only .rendered files
+clean-rendered:
+	rm -f $(OUTPUT_DIR)/*/.rendered
+
+mrproper: clean
+	rm -rf $(RENDER_SCRIPT)

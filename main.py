@@ -19,8 +19,8 @@ def load_data(data_file):
     with open(data_file, 'rb') as f:
         data = pickle.load(f, encoding='latin1')
         
-    p1_jnts = data['full_refine_pred_p1_20fps_jnts_list']
-    p2_jnts = data['full_refine_pred_p2_20fps_jnts_list']
+    p1_jnts = data.get('full_refine_pred_p1_20fps_jnts_list', data['full_refine_pseudo_gt_p1_20fps_jnts_list'])
+    p2_jnts = data.get('full_refine_pred_p2_20fps_jnts_list', data['full_refine_pseudo_gt_p2_20fps_jnts_list'])
     obj_verts_list = data['filtered_obj_verts_list']
     obj_faces_list = data['obj_faces_list']
 
@@ -38,7 +38,7 @@ def setup_directories(data_file):
     os.makedirs(p2_dir, exist_ok=True)
     os.makedirs(obj_dir, exist_ok=True)
     
-    return p1_dir, p2_dir, obj_dir
+    return output_dir, p1_dir, p2_dir, obj_dir
 
 def get_converters(data_dict, data_file):
     """Get or create npy2obj converters"""
@@ -59,8 +59,18 @@ def get_converters(data_dict, data_file):
             
     return converter1, converter2
 
-def save_obj_files(p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, converter_obj, trans_offset=None):
+def save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, converter_obj, trans_offset=None):
     """Save obj files for each frame"""
+    # Save root locations
+    root_loc1 = converter1.get_traj()
+    root_loc2 = converter2.get_traj()
+    
+    root_locs = {
+        'root_loc1': root_loc1,
+        'root_loc2': root_loc2
+    }
+    np.save(os.path.join(output_dir, "root_locs.npy"), root_locs)
+    
     for frame_i in range(num_frames):
         obj_path = os.path.join(p1_dir, f"frame_{frame_i:04d}.obj")
         converter1.save_obj(obj_path, frame_i, offset=trans_offset)
@@ -70,7 +80,13 @@ def save_obj_files(p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, 
         
         obj_path = os.path.join(obj_dir, f"frame_{frame_i:04d}.obj")
         converter_obj.save_frame_obj(obj_path,frame_i)
-        print(f"Saved frame {frame_i} to {obj_path}")
+        
+        # Print progress bar
+        progress = (frame_i + 1) / num_frames * 100
+        print(f"\rSaving frames: [{('=' * int(progress/2)).ljust(50)}] {progress:.1f}%", end='', flush=True)
+    print() # New line after progress bar completes
+        
+    
 
 def main():
     args = parse_args()
@@ -78,19 +94,19 @@ def main():
 
     # Load data
     p1_jnts, p2_jnts, obj_verts_list, obj_faces_list = load_data(data_file)
-    # plot_joints(p1_jnts, p2_jnts)
+    plot_joints(p1_jnts, p2_jnts, obj_verts_list)
     
     # Format sequences
     data_dict = format_joint_sequences(p1_jnts, p2_jnts)
     # Setup directories
-    p1_dir, p2_dir, obj_dir = setup_directories(data_file)
+    output_dir, p1_dir, p2_dir, obj_dir = setup_directories(data_file)
     
     # Get converters
     converter1, converter2 = get_converters(data_dict, data_file)
     # Setup interpolator
     converter_obj = interpolate(obj_verts_list, obj_faces_list, interpolate=2.0)
     
-    save_obj_files(p1_dir, p2_dir, obj_dir, converter1.num_frames, converter1, converter2, converter_obj)
+    save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, converter1.num_frames, converter1, converter2, converter_obj)
 
 if __name__ == "__main__":
     main()

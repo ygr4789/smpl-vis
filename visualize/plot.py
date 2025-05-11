@@ -2,9 +2,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_joints(p1_joints, p2_joints):
+def plot_joints(p1_joints, p2_joints, obj_verts_list):
     print(f"p1_joints shape: {p1_joints.shape}")
     print(f"p2_joints shape: {p2_joints.shape}")
+    print(f"obj_verts_list shape: {obj_verts_list.shape}")
     
     # Create figure and axes
     fig = plt.figure(figsize=(10, 10))

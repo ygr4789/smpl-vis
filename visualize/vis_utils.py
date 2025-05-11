@@ -39,7 +39,7 @@ class npy2obj:
                                      jointstype='vertices',
                                      # jointstype='smpl',  # for joint locations
                                      vertstrans=True)
-
+                                     
     def get_vertices(self, sample_i, frame_i, offset=None):
         if offset is not None:
             return self.vertices[sample_i, :, :, frame_i].squeeze().tolist() + offset
@@ -49,21 +49,15 @@ class npy2obj:
     def get_trimesh(self, sample_i, frame_i, offset=None):
         return Trimesh(vertices=self.get_vertices(sample_i, frame_i, offset), faces=self.faces)
     
-    def get_traj_sphere(self, mesh):
-        root_posi = np.copy(mesh.vertices).mean(0) # (6000, 3)
-        root_posi[1]  = self.vertices.numpy().min(axis=(0, 1, 3))[1] + 0.1
-        mesh = trimesh.primitives.Sphere(radius=0.05, center=root_posi, transform=None, subdivisions=1)
-        return mesh
+    def get_traj(self):
+        root_positions = self.vertices.numpy().mean(axis=(0, 1))  # [3, frame_n]
+        root_positions = root_positions.transpose(1, 0)  # [frame_n, 3]
+        return root_positions
 
     def save_obj(self, save_path, frame_i, offset=None):
         mesh = self.get_trimesh(0, frame_i, offset)
-        ground_sph_mesh = self.get_traj_sphere(mesh)
-        loc_obj_name = os.path.splitext(os.path.basename(save_path))[0] + "_ground_loc.obj"
-        ground_save_path = os.path.join(os.path.dirname(save_path), "loc", loc_obj_name)
         with open(save_path, 'w') as fw:
             mesh.export(fw, 'obj')
-        # with open(ground_save_path, 'w') as fw:
-        #     ground_sph_mesh.export(fw, 'obj')
         return save_path     
     
     def preprocess_motion(self, motion_tensor, cam, interpolate):
