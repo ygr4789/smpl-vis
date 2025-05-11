@@ -36,19 +36,19 @@ def load_data(data_file):
 
     return p1_jnts, p2_jnts, obj_verts_list, obj_faces_list
 
-def setup_directories():
+def setup_directories(data_file):
     """Create necessary output directories"""
-    output_dir = "obj_output"
-    p1_dir = "p1"
-    p2_dir = "p2" 
-    obj_dir = "obj"
+    output_dir = os.path.join("output", os.path.splitext(os.path.basename(data_file))[0])
+    p1_dir = os.path.join(output_dir, "p1")
+    p2_dir = os.path.join(output_dir, "p2") 
+    obj_dir = os.path.join(output_dir, "obj")
     
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(os.path.join(output_dir, p1_dir), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, p2_dir), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, obj_dir), exist_ok=True)
+    os.makedirs(p1_dir, exist_ok=True)
+    os.makedirs(p2_dir, exist_ok=True)
+    os.makedirs(obj_dir, exist_ok=True)
     
-    return output_dir, p1_dir, p2_dir, obj_dir
+    return p1_dir, p2_dir, obj_dir
 
 def get_converters(data_dict, data_file):
     """Get or create npy2obj converters"""
@@ -69,17 +69,17 @@ def get_converters(data_dict, data_file):
             
     return converter1, converter2
 
-def save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, interpolator, trans_offset=None):
+def save_obj_files(p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, converter_obj, trans_offset=None):
     """Save obj files for each frame"""
     for frame_i in range(num_frames):
-        obj_path = os.path.join(output_dir, p1_dir, f"frame_{frame_i:04d}.obj")
+        obj_path = os.path.join(p1_dir, f"frame_{frame_i:04d}.obj")
         converter1.save_obj(obj_path, frame_i, offset=trans_offset)
         
-        obj_path = os.path.join(output_dir, p2_dir, f"frame_{frame_i:04d}.obj")
+        obj_path = os.path.join(p2_dir, f"frame_{frame_i:04d}.obj")
         converter2.save_obj(obj_path, frame_i, offset=trans_offset)
         
-        obj_path = os.path.join(output_dir, obj_dir, f"frame_{frame_i:04d}.obj")
-        interpolator.save_frame_obj(frame_i, obj_path)
+        obj_path = os.path.join(obj_dir, f"frame_{frame_i:04d}.obj")
+        converter_obj.save_frame_obj(obj_path,frame_i)
         print(f"Saved frame {frame_i} to {obj_path}")
 
 def main():
@@ -88,20 +88,19 @@ def main():
 
     # Load data
     p1_jnts, p2_jnts, obj_verts_list, obj_faces_list = load_data(data_file)
-    
     # plot_joints(p1_jnts, p2_jnts)
     
     # Format sequences
     data_dict = format_joint_sequences(p1_jnts, p2_jnts)
     # Setup directories
-    output_dir, p1_dir, p2_dir, obj_dir = setup_directories()
+    p1_dir, p2_dir, obj_dir = setup_directories(data_file)
     
     # Get converters
     converter1, converter2 = get_converters(data_dict, data_file)
     # Setup interpolator
-    interpolator = interpolate(obj_verts_list, obj_faces_list, interpolate=2.0)
+    converter_obj = interpolate(obj_verts_list, obj_faces_list, interpolate=2.0)
     
-    save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, converter1.num_frames, converter1, converter2, interpolator)
+    save_obj_files(p1_dir, p2_dir, obj_dir, converter1.num_frames, converter1, converter2, converter_obj)
 
 if __name__ == "__main__":
     main()

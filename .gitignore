@@ -1,5 +1,6 @@
-obj_output
 data
 __pycache__
 body_models
 cache
+video
+output

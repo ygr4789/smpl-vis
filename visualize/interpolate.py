@@ -38,7 +38,7 @@ class interpolate:
                 
         return interp_verts
 
-    def save_frame_obj(self, frame_idx, save_path):
+    def save_frame_obj(self, save_path, frame_idx):
         """
         Save a single frame's vertices and faces as an obj file.
         
