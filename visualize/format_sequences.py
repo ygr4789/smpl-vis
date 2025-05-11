@@ -16,12 +16,12 @@ def format_joint_sequences(seq1, seq2):
     s2 = seq2.shape[0]
     
     # Combine sequences into a single array with shape (2, 24, 3, max(s1,s2))
-    max_len = max(s1, s2)
-    combined_seq = np.zeros((2, 24, 3, max_len))
+    min_len = max(s1, s2)
+    combined_seq = np.zeros((2, 24, 3, min_len))
     
     # Fill in the sequences
-    combined_seq[0, :, :, :s1] = seq1.transpose(1, 2, 0)  # (24, 3, s1)
-    combined_seq[1, :, :, :s2] = seq2.transpose(1, 2, 0)  # (24, 3, s2)
+    combined_seq[0, :, :, :min_len] = seq1.transpose(1, 2, 0)[:, :, :min_len]  # (24, 3, s1)
+    combined_seq[1, :, :, :min_len] = seq2.transpose(1, 2, 0)[:, :, :min_len]  # (24, 3, s2)
     
     # Create the data dictionary
     data_dict = {

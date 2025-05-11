@@ -1,10 +1,10 @@
 import pickle
 import os
 import numpy as np
+import torch
 from visualize.format_sequences import format_joint_sequences
 from visualize.vis_utils import npy2obj
 from visualize.interpolate import interpolate
-from visualize.vis_configs import trans_offset
 from visualize.plot import plot_joints, plot_trajectories
 
 import argparse
@@ -19,11 +19,23 @@ def load_data(data_file):
     with open(data_file, 'rb') as f:
         data = pickle.load(f, encoding='latin1')
         
-    p1_jnts = data.get('full_refine_pred_p1_20fps_jnts_list', data['full_refine_pseudo_gt_p1_20fps_jnts_list'])
-    p2_jnts = data.get('full_refine_pred_p2_20fps_jnts_list', data['full_refine_pseudo_gt_p2_20fps_jnts_list'])
+    p1_jnts = data.get('full_refine_pred_p1_15fps_jnts_list')
+    if p1_jnts is None:
+        p1_jnts = data.get('full_refine_pseudo_gt_p1_15fps_jnts_list')
+            
+    p2_jnts = data.get('full_refine_pred_p2_15fps_jnts_list') 
+    if p2_jnts is None:
+        p2_jnts = data.get('full_refine_pseudo_gt_p2_15fps_jnts_list')
+        
     obj_verts_list = data['filtered_obj_verts_list']
     obj_faces_list = data['obj_faces_list']
-
+    
+    # Convert joint sequences to numpy if they are torch tensors
+    if isinstance(p1_jnts, torch.Tensor):
+        p1_jnts = p1_jnts.detach().cpu().numpy()
+    if isinstance(p2_jnts, torch.Tensor):
+        p2_jnts = p2_jnts.detach().cpu().numpy()
+    
     return p1_jnts, p2_jnts, obj_verts_list, obj_faces_list
 
 def setup_directories(data_file):
@@ -50,8 +62,8 @@ def get_converters(data_dict, data_file):
             converters = pickle.load(f)
             converter1, converter2 = converters
     else:
-        converter1 = npy2obj(data_dict, sample_idx=0, rep_idx=0, device=0, interpolate=1.5, cuda=True)
-        converter2 = npy2obj(data_dict, sample_idx=0, rep_idx=1, device=0, interpolate=1.5, cuda=True)
+        converter1 = npy2obj(data_dict, sample_idx=0, rep_idx=0, device=0, interpolate=2.0, cuda=True)
+        converter2 = npy2obj(data_dict, sample_idx=0, rep_idx=1, device=0, interpolate=2.0, cuda=True)
         os.makedirs(cache_dir, exist_ok=True)
         
         with open(cache_file, 'wb') as f:
@@ -59,7 +71,7 @@ def get_converters(data_dict, data_file):
             
     return converter1, converter2
 
-def save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, num_frames, converter1, converter2, converter_obj, trans_offset=None):
+def save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, converter1, converter2, converter_obj):
     """Save obj files for each frame"""
     # Save root locations
     root_loc1 = converter1.get_traj()
@@ -71,12 +83,14 @@ def save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, num_frames, converter1, 
     }
     np.save(os.path.join(output_dir, "root_locs.npy"), root_locs)
     
+    num_frames = min(converter_obj.num_frames, converter1.num_frames, converter2.num_frames)
+    
     for frame_i in range(num_frames):
         obj_path = os.path.join(p1_dir, f"frame_{frame_i:04d}.obj")
-        converter1.save_obj(obj_path, frame_i, offset=trans_offset)
+        converter1.save_obj(obj_path, frame_i)
         
         obj_path = os.path.join(p2_dir, f"frame_{frame_i:04d}.obj")
-        converter2.save_obj(obj_path, frame_i, offset=trans_offset)
+        converter2.save_obj(obj_path, frame_i)
         
         obj_path = os.path.join(obj_dir, f"frame_{frame_i:04d}.obj")
         converter_obj.save_frame_obj(obj_path,frame_i)
@@ -94,7 +108,6 @@ def main():
 
     # Load data
     p1_jnts, p2_jnts, obj_verts_list, obj_faces_list = load_data(data_file)
-    plot_joints(p1_jnts, p2_jnts, obj_verts_list)
     
     # Format sequences
     data_dict = format_joint_sequences(p1_jnts, p2_jnts)
@@ -106,7 +119,7 @@ def main():
     # Setup interpolator
     converter_obj = interpolate(obj_verts_list, obj_faces_list, interpolate=2.0)
     
-    save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, converter1.num_frames, converter1, converter2, converter_obj)
+    save_obj_files(output_dir, p1_dir, p2_dir, obj_dir, converter1, converter2, converter_obj)
 
 if __name__ == "__main__":
     main()

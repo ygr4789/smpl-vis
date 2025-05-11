@@ -1,12 +1,7 @@
 from model.rotation2xyz import Rotation2xyz
-import numpy as np
-import trimesh
 from trimesh import Trimesh
-import os
 import torch
 from visualize.simplify_loc2rot import joints2smpl
-import natsort
-from pathlib import Path
 import utils.rotation_conversions as geometry
 
 class npy2obj:
@@ -40,22 +35,19 @@ class npy2obj:
                                      # jointstype='smpl',  # for joint locations
                                      vertstrans=True)
                                      
-    def get_vertices(self, sample_i, frame_i, offset=None):
-        if offset is not None:
-            return self.vertices[sample_i, :, :, frame_i].squeeze().tolist() + offset
-        else:
-            return self.vertices[sample_i, :, :, frame_i].squeeze().tolist()
+    def get_vertices(self, sample_i, frame_i):
+        return self.vertices[sample_i, :, :, frame_i].squeeze().tolist()
 
-    def get_trimesh(self, sample_i, frame_i, offset=None):
-        return Trimesh(vertices=self.get_vertices(sample_i, frame_i, offset), faces=self.faces)
+    def get_trimesh(self, sample_i, frame_i):
+        return Trimesh(vertices=self.get_vertices(sample_i, frame_i), faces=self.faces)
     
     def get_traj(self):
         root_positions = self.vertices.numpy().mean(axis=(0, 1))  # [3, frame_n]
         root_positions = root_positions.transpose(1, 0)  # [frame_n, 3]
         return root_positions
 
-    def save_obj(self, save_path, frame_i, offset=None):
-        mesh = self.get_trimesh(0, frame_i, offset)
+    def save_obj(self, save_path, frame_i):
+        mesh = self.get_trimesh(0, frame_i)
         with open(save_path, 'w') as fw:
             mesh.export(fw, 'obj')
         return save_path     

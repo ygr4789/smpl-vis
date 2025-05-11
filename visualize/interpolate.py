@@ -3,7 +3,7 @@ from trimesh import Trimesh
 
 class interpolate:
     def __init__(self, verts_list, faces_list, interpolate):
-        self.verts_list = self.interpolate_verts_list(verts_list, interpolate)
+        self.verts_list, self.num_frames = self.interpolate_verts_list(verts_list, interpolate)
         self.faces_list = faces_list
 
     def interpolate_verts_list(self, verts_list, interpolate):
@@ -36,7 +36,7 @@ class interpolate:
                 v2 = verts_list[frame_idx + 1]
                 interp_verts[k] = v1 + alpha * (v2 - v1)
                 
-        return interp_verts
+        return interp_verts, total_frames
 
     def save_frame_obj(self, save_path, frame_idx):
         """

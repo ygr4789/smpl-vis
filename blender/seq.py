@@ -234,6 +234,7 @@ def main():
     print(f"Rendering {len(obj_files[0])} frames...")
     with stdout_redirected(keyword="Fra:", on_match=lambda line: line[:-1].encode()):
         bpy.ops.render.render(animation=True)
+    print()
 
 if __name__ == "__main__":
     main()

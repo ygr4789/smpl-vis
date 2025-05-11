@@ -18,11 +18,17 @@ $(OUTPUT_DIR)/%: $(DATA_DIR)/%.pkl
 	@echo "Generating $@ from $<"
 	python $(SCRIPT) $<
 
-# Rule: run rendering only if previous step succeeded
+# Rule: run rendering only if previous step succeeded 
 $(OUTPUT_DIR)/%/.rendered: $(OUTPUT_DIR)/%
 	@echo "Rendering $*"
 	python $(RENDER_SCRIPT) $(OUTPUT_DIR)/$* -l
 	touch $@
+	@echo "--------------------------------"
+	@echo "Video rendering completed for $* !"
+	@echo "--------------------------------"
+	@echo
+
+.PRECIOUS: $(OUTPUT_DIR)/%
 
 # Clean all outputs
 clean:

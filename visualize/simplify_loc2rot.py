@@ -20,7 +20,6 @@ class joints2smpl:
         self.joint_category = "AMASS"
         self.num_smplify_iters = 150
         self.fix_foot = False
-        print(config.SMPL_MODEL_DIR)
         
         smplmodel = smplx.create(config.SMPL_MODEL_DIR,
                                  model_type="smpl", gender="neutral", ext="pkl", flat_hand_mean=False, left_hand_pose=left_hand_pose, right_hand_pose=right_hand_pose,

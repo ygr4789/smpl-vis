@@ -2,6 +2,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+import argparse
+import pickle
+
 def plot_joints(p1_joints, p2_joints, obj_verts_list):
     print(f"p1_joints shape: {p1_joints.shape}")
     print(f"p2_joints shape: {p2_joints.shape}")
@@ -18,9 +21,10 @@ def plot_joints(p1_joints, p2_joints, obj_verts_list):
     
     scatter_p1 = None
     scatter_p2 = None
+    scatter_obj = None
     
     def update(val):
-        nonlocal scatter_p1, scatter_p2
+        nonlocal scatter_p1, scatter_p2, scatter_obj
         
         # Get current frame from slider
         frame = int(frame_slider.val)
@@ -30,6 +34,8 @@ def plot_joints(p1_joints, p2_joints, obj_verts_list):
             scatter_p1.remove()
         if scatter_p2 is not None:
             scatter_p2.remove()
+        if scatter_obj is not None:
+            scatter_obj.remove()
             
         # Plot joints for p1 at selected frame
         scatter_p1_points = []
@@ -48,6 +54,15 @@ def plot_joints(p1_joints, p2_joints, obj_verts_list):
         scatter_p2_points = np.array(scatter_p2_points)
         scatter_p2 = ax.scatter(scatter_p2_points[:,0], scatter_p2_points[:,1], scatter_p2_points[:,2],
                               c='blue', s=50, label='p2 joints')
+        
+        # Plot obj at selected frame
+        scatter_obj_points = []
+        for vert_idx in range(obj_verts_list.shape[1]):
+            vert_pos = obj_verts_list[frame, vert_idx]
+            scatter_obj_points.append([vert_pos[0], vert_pos[2], vert_pos[1]])
+        scatter_obj_points = np.array(scatter_obj_points)
+        scatter_obj = ax.scatter(scatter_obj_points[:,0], scatter_obj_points[:,1], scatter_obj_points[:,2],
+                              c='green', s=50, label='obj verts')
         
         # Update title
         ax.set_title(f'Joint Positions at Frame {frame}')
@@ -144,3 +159,21 @@ def plot_trajectories(points_trajs):
     ax.set_box_aspect([1,1,1])
     
     plt.show()
+    
+def main():
+    parser = argparse.ArgumentParser(description='Process motion data file')
+    parser.add_argument('data_file', type=str, help='Path to the data file')
+    args = parser.parse_args()
+    
+    with open(args.data_file, 'rb') as f:
+        data = pickle.load(f, encoding='latin1')
+        
+    p1_jnts = data.get('full_refine_pred_p1_20fps_jnts_list')
+    p2_jnts = data.get('full_refine_pred_p2_20fps_jnts_list')
+    obj_verts_list = data['filtered_obj_verts_list']
+
+    plot_joints(p1_jnts, p2_jnts, obj_verts_list)
+    # plot_trajectories(obj_verts_list)
+    
+if __name__ == "__main__":
+    main()
