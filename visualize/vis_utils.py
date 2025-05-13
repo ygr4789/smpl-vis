@@ -2,6 +2,8 @@ from model.rotation2xyz import Rotation2xyz
 from trimesh import Trimesh
 import torch
 import utils.rotation_conversions as geometry
+import math 
+
 
 from visualize.simplify_loc2rot import joints2smpl
 from visualize.converter import converter
@@ -23,13 +25,39 @@ class npy2obj(converter):
         self.opt_dict = opt_dict
         
         motion = self.preprocess_motion(motion_tensor, opt_dict['cam'], interpolate).cpu().numpy()
+        motion  = self.postprocess_motion(torch.tensor(motion))
         self.num_frames = motion.shape[-1]
-        self.vertices = rot2xyz(torch.tensor(motion), mask=None,
+        
+        self.bs, self.njoints, self.nfeats, self.nframes = motion.shape
+        self.real_num_frames = motion_dict['lengths'][self.absl_idx] # 196
+        
+        self.vertices = self.rot2xyz(motion, mask=None,
                                      pose_rep='rot6d', translation=True, glob=True,
                                      jointstype='vertices',
                                      # jointstype='smpl',  # for joint locations
                                      vertstrans=True)
                                      
+    def postprocess_motion(self, motion_tensor):
+        print("postprocess")
+        rotations = motion_tensor[:,:-1] # shape [1, 24, 6, 104] (6d)
+        neck_joint_idx, head_joint_idx = 12, 15 # note neck is not 14 !!
+        lwrist_joint_idx, rwrist_joint_idx = 20, 21 # palm is 22 23
+        batch_size, joints, _, seq_len = rotations.shape
+        
+        # 6D representation of identity rotation (first two columns of identity matrix)
+        identity_6d = torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                                dtype=rotations.dtype,
+                                device=rotations.device).view(1, 1, 6, 1)
+        
+        # Expand to [batch, 1, 6, seq_len] so it can be assigned per joint
+        identity_6d_all = identity_6d.expand(batch_size, 1, 6, seq_len)
+
+        for joint_idx in [12, 15, 20, 21, 22, 23]:
+            rotations[:, joint_idx:joint_idx+1, :, :] = identity_6d_all
+        
+        motion_tensor[:,:-1] = rotations
+        return motion_tensor
+
     def get_vertices(self, sample_i, frame_i):
         return self.vertices[sample_i, :, :, frame_i].squeeze().tolist()
 
