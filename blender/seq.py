@@ -11,10 +11,16 @@ import sys
 from contextlib import contextmanager
 
 def parse_arguments():
+    argv = sys.argv
+    if "--" in argv:
+        argv = argv[argv.index("--") + 1:]  
+    else:
+        argv = []
+
     parser = argparse.ArgumentParser()
     parser.add_argument('obj_folder', type=str, help='Path to obj output folder')
     parser.add_argument('-l', '--low', action='store_true', help='Use low quality fast rendering settings')
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 @contextmanager
 def stdout_redirected(keyword=None, on_match=None):
