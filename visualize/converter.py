@@ -1,7 +1,20 @@
 import numpy as np
 from trimesh import Trimesh
 
-class interpolate:
+from abc import ABC, abstractmethod
+
+class converter(ABC):
+    @abstractmethod
+    def save_obj(self, save_path, frame_idx):
+        """Save a single frame's vertices and faces as an obj file.
+        
+        Args:
+            save_path: str, path to save the obj file
+            frame_idx: int, index of frame to save
+        """
+        pass
+
+class traj_interpolator(converter):
     def __init__(self, verts_list, faces_list, interpolate):
         self.verts_list, self.num_frames = self.interpolate_verts_list(verts_list, interpolate)
         self.faces_list = faces_list
@@ -38,7 +51,7 @@ class interpolate:
                 
         return interp_verts, total_frames
 
-    def save_frame_obj(self, save_path, frame_idx):
+    def save_obj(self, save_path, frame_idx):
         """
         Save a single frame's vertices and faces as an obj file.
         
