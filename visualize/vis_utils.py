@@ -1,35 +1,30 @@
 from model.rotation2xyz import Rotation2xyz
 from trimesh import Trimesh
 import torch
-from visualize.simplify_loc2rot import joints2smpl
 import utils.rotation_conversions as geometry
 
-class npy2obj:
-    def __init__(self, motion_dict, sample_idx, rep_idx, interpolate=1.0, device=0, cuda=True):
-        motion = motion_dict['motion']
-        self.rot2xyz = Rotation2xyz(device='cpu')
-        self.faces = self.rot2xyz.smpl_model.faces
-        self.bs, self.njoints, self.nfeats, self.nframes = motion.shape
-        self.sample_idx = sample_idx
-        self.total_num_samples = motion_dict['num_samples']
-        self.rep_idx = rep_idx
-        self.absl_idx = self.sample_idx*self.total_num_samples + self.rep_idx
-        self.num_frames = motion[self.absl_idx].shape[-1]
-        self.j2s = joints2smpl(num_frames=self.num_frames, device_id=device, cuda=cuda)
+from visualize.simplify_loc2rot import joints2smpl
+from visualize.converter import converter
 
-        assert self.nfeats == 3
+class npy2obj(converter):
+    def __init__(self, motion_dict, sample_idx, interpolate=1.0, device=0, cuda=True):
+        motion = motion_dict['motion']
+        bs, njoints, nfeats, nframes = motion.shape
+        assert nfeats == 3
         
-        print(f'Running SMPLify For sample [{sample_idx}], repetition [{rep_idx}], it may take a few minutes.')
-        motion_tensor, opt_dict = self.j2s.joint2smpl(motion[self.absl_idx].transpose(2, 0, 1))  # [nframes, njoints, 3]
+        rot2xyz = Rotation2xyz(device='cpu')
+        self.faces = rot2xyz.smpl_model.faces
+        
+        self.num_frames = motion[sample_idx].shape[-1]
+        j2s = joints2smpl(num_frames=self.num_frames, device_id=device, cuda=cuda)
+        
+        print(f'Running SMPLify For sample [{sample_idx}], it may take a few minutes.')
+        motion_tensor, opt_dict = j2s.joint2smpl(motion[sample_idx].transpose(2, 0, 1))  # [nframes, njoints, 3]
         self.opt_dict = opt_dict
         
         motion = self.preprocess_motion(motion_tensor, opt_dict['cam'], interpolate).cpu().numpy()
         self.num_frames = motion.shape[-1]
-        
-        self.bs, self.njoints, self.nfeats, self.nframes = motion.shape
-        self.real_num_frames = motion_dict['lengths'][self.absl_idx] # 196
-        
-        self.vertices = self.rot2xyz(torch.tensor(motion), mask=None,
+        self.vertices = rot2xyz(torch.tensor(motion), mask=None,
                                      pose_rep='rot6d', translation=True, glob=True,
                                      jointstype='vertices',
                                      # jointstype='smpl',  # for joint locations
