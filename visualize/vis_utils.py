@@ -5,37 +5,6 @@ from visualize.simplify_loc2rot import joints2smpl
 import utils.rotation_conversions as geometry
 import math 
 
-def upsample_rot_trans_variable_fps(rot_mats, trans, src_fps, tgt_fps):
-    B, F, J, _, _ = rot_mats.shape
-    assert trans.shape == (B, F, 3)
-
-    ratio = tgt_fps / src_fps
-    new_len = math.ceil((F - 1) * ratio) + 1  # 마지막 포함
-
-    rot_out = []
-    trans_out = []
-
-    for i in range(new_len):
-        t_global = i / ratio
-        f0 = torch.clamp(torch.floor(torch.tensor(t_global)).long(), 0, F - 1)
-        f1 = torch.clamp(f0 + 1, 0, F - 1)
-        t = t_global - f0.item()
-
-        r0 = rot_mats[:, f0]   # [B, J, 3, 3]
-        r1 = rot_mats[:, f1]
-        tr0 = trans[:, f0]     # [B, 3]
-        tr1 = trans[:, f1]
-
-        r_interp = geometry.matrix_slerp(r0, r1, t)            # [B, J, 3, 3]
-        tr_interp = (1 - t) * tr0 + t * tr1           # [B, 3]
-
-        rot_out.append(r_interp.unsqueeze(1))         # [B, 1, J, 3, 3]
-        trans_out.append(tr_interp.unsqueeze(1))      # [B, 1, 3]
-
-    rot_final = torch.cat(rot_out, dim=1)     # [B, T, J, 3, 3]
-    trans_final = torch.cat(trans_out, dim=1) # [B, T, 3]
-
-    return rot_final, trans_final
 
 class npy2obj:
     def __init__(self, motion_dict, sample_idx, rep_idx, interpolate=1.0, device=0, cuda=True):
