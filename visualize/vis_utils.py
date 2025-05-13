@@ -3,6 +3,39 @@ from trimesh import Trimesh
 import torch
 from visualize.simplify_loc2rot import joints2smpl
 import utils.rotation_conversions as geometry
+import math 
+
+def upsample_rot_trans_variable_fps(rot_mats, trans, src_fps, tgt_fps):
+    B, F, J, _, _ = rot_mats.shape
+    assert trans.shape == (B, F, 3)
+
+    ratio = tgt_fps / src_fps
+    new_len = math.ceil((F - 1) * ratio) + 1  # 마지막 포함
+
+    rot_out = []
+    trans_out = []
+
+    for i in range(new_len):
+        t_global = i / ratio
+        f0 = torch.clamp(torch.floor(torch.tensor(t_global)).long(), 0, F - 1)
+        f1 = torch.clamp(f0 + 1, 0, F - 1)
+        t = t_global - f0.item()
+
+        r0 = rot_mats[:, f0]   # [B, J, 3, 3]
+        r1 = rot_mats[:, f1]
+        tr0 = trans[:, f0]     # [B, 3]
+        tr1 = trans[:, f1]
+
+        r_interp = geometry.matrix_slerp(r0, r1, t)            # [B, J, 3, 3]
+        tr_interp = (1 - t) * tr0 + t * tr1           # [B, 3]
+
+        rot_out.append(r_interp.unsqueeze(1))         # [B, 1, J, 3, 3]
+        trans_out.append(tr_interp.unsqueeze(1))      # [B, 1, 3]
+
+    rot_final = torch.cat(rot_out, dim=1)     # [B, T, J, 3, 3]
+    trans_final = torch.cat(trans_out, dim=1) # [B, T, 3]
+
+    return rot_final, trans_final
 
 class npy2obj:
     def __init__(self, motion_dict, sample_idx, rep_idx, interpolate=1.0, device=0, cuda=True):
@@ -24,17 +57,39 @@ class npy2obj:
         self.opt_dict = opt_dict
         
         motion = self.preprocess_motion(motion_tensor, opt_dict['cam'], interpolate).cpu().numpy()
+        motion  = self.postprocess_motion(torch.tensor(motion))
         self.num_frames = motion.shape[-1]
         
         self.bs, self.njoints, self.nfeats, self.nframes = motion.shape
         self.real_num_frames = motion_dict['lengths'][self.absl_idx] # 196
         
-        self.vertices = self.rot2xyz(torch.tensor(motion), mask=None,
+        self.vertices = self.rot2xyz(motion, mask=None,
                                      pose_rep='rot6d', translation=True, glob=True,
                                      jointstype='vertices',
                                      # jointstype='smpl',  # for joint locations
                                      vertstrans=True)
                                      
+    def postprocess_motion(self, motion_tensor):
+        print("postprocess")
+        rotations = motion_tensor[:,:-1] # shape [1, 24, 6, 104] (6d)
+        neck_joint_idx, head_joint_idx = 12, 15 # note neck is not 14 !!
+        lwrist_joint_idx, rwrist_joint_idx = 20, 21 # palm is 22 23
+        batch_size, joints, _, seq_len = rotations.shape
+        
+        # 6D representation of identity rotation (first two columns of identity matrix)
+        identity_6d = torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                                dtype=rotations.dtype,
+                                device=rotations.device).view(1, 1, 6, 1)
+        
+        # Expand to [batch, 1, 6, seq_len] so it can be assigned per joint
+        identity_6d_all = identity_6d.expand(batch_size, 1, 6, seq_len)
+
+        for joint_idx in [12, 15, 20, 21, 22, 23]:
+            rotations[:, joint_idx:joint_idx+1, :, :] = identity_6d_all
+        
+        motion_tensor[:,:-1] = rotations
+        return motion_tensor
+
     def get_vertices(self, sample_i, frame_i):
         return self.vertices[sample_i, :, :, frame_i].squeeze().tolist()
 

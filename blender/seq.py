@@ -58,50 +58,71 @@ def setup_render_settings(args, video_path):
     bpy.context.scene.render.ffmpeg.codec = 'H264'
     bpy.context.scene.render.filepath = video_path
 
-    if args.low:
-        setup_low_quality_settings()
-    else:
-        setup_high_quality_settings()
+    # if args.low:
+    #     setup_low_quality_settings()
+    # else:
+    #     setup_high_quality_settings()
+    setup_settings()
 
-def setup_low_quality_settings():
-    """Configure settings for fast, low-quality rendering"""
-    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-    bpy.context.scene.eevee.taa_render_samples = 16
-    bpy.context.scene.eevee.use_soft_shadows = False
-    bpy.context.scene.eevee.use_bloom = False
-    bpy.context.scene.eevee.use_ssr = False
-    bpy.context.scene.eevee.use_ssr_refraction = False
-    bpy.context.scene.render.resolution_x = 1280
-    bpy.context.scene.render.resolution_y = 720
-    bpy.context.scene.render.resolution_percentage = 50
+def setup_settings():
+    """Safe settings for rendering under EEVEE"""
+    bpy.context.scene.render.engine = 'BLENDER_EEVEE_NEXT'  # Or EEVEE_NEXT, with caution
+
+    # Use hasattr to avoid attribute errors
+    eevee = getattr(bpy.context.scene, 'eevee', None)
+    if eevee:
+        if hasattr(eevee, 'taa_render_samples'):
+            eevee.taa_render_samples = 16
+        for attr in ['use_soft_shadows', 'use_bloom', 'use_ssr', 'use_ssr_refraction']:
+            if hasattr(eevee, attr):
+                setattr(eevee, attr, False)
+
+    bpy.context.scene.render.resolution_x = 3840
+    bpy.context.scene.render.resolution_y = 2160
+    bpy.context.scene.render.resolution_percentage = 100
     bpy.context.scene.use_nodes = False
     bpy.context.scene.render.use_compositing = False
     bpy.context.scene.render.use_sequencer = False
-    # bpy.context.scene.render.engine = 'CYCLES'
-    # bpy.context.scene.cycles.samples = 256
-    # bpy.context.scene.cycles.use_denoising = True
-    # bpy.context.scene.cycles.use_adaptive_sampling = True
-    # bpy.context.scene.cycles.adaptive_threshold = 0.1
-    # bpy.context.scene.render.resolution_x = 1280
-    # bpy.context.scene.render.resolution_y = 720
-    # bpy.context.scene.render.resolution_percentage = 50
-    # bpy.context.scene.use_nodes = True
-    # bpy.context.scene.render.use_compositing = True
-    # bpy.context.scene.render.use_sequencer = True
 
-def setup_high_quality_settings():
-    """Configure settings for high-quality rendering"""
-    bpy.context.scene.render.engine = 'CYCLES'
-    bpy.context.scene.cycles.samples = 256
-    bpy.context.scene.cycles.use_denoising = True
-    bpy.context.scene.cycles.use_adaptive_sampling = True
-    bpy.context.scene.cycles.adaptive_threshold = 0.1
-    bpy.context.scene.render.resolution_x = 1920
-    bpy.context.scene.render.resolution_y = 1080
-    bpy.context.scene.render.resolution_percentage = 100
-    bpy.context.scene.use_nodes = True
-    bpy.context.scene.render.use_compositing = True
-    bpy.context.scene.render.use_sequencer = True
+# def setup_low_quality_settings():
+#     """Configure settings for fast, low-quality rendering"""
+#     bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+#     bpy.context.scene.eevee.taa_render_samples = 16
+#     bpy.context.scene.eevee.use_soft_shadows = False
+#     bpy.context.scene.eevee.use_bloom = False
+#     bpy.context.scene.eevee.use_ssr = False
+#     bpy.context.scene.eevee.use_ssr_refraction = False
+#     bpy.context.scene.render.resolution_x = 1280
+#     bpy.context.scene.render.resolution_y = 720
+#     bpy.context.scene.render.resolution_percentage = 50
+#     bpy.context.scene.use_nodes = False
+#     bpy.context.scene.render.use_compositing = False
+#     bpy.context.scene.render.use_sequencer = False
+#     # bpy.context.scene.render.engine = 'CYCLES'
+#     # bpy.context.scene.cycles.samples = 256
+#     # bpy.context.scene.cycles.use_denoising = True
+#     # bpy.context.scene.cycles.use_adaptive_sampling = True
+#     # bpy.context.scene.cycles.adaptive_threshold = 0.1
+#     # bpy.context.scene.render.resolution_x = 1280
+#     # bpy.context.scene.render.resolution_y = 720
+#     # bpy.context.scene.render.resolution_percentage = 50
+#     # bpy.context.scene.use_nodes = True
+#     # bpy.context.scene.render.use_compositing = True
+#     # bpy.context.scene.render.use_sequencer = True
+
+# def setup_high_quality_settings():
+#     """Configure settings for high-quality rendering"""
+#     bpy.context.scene.render.engine = 'CYCLES'
+#     bpy.context.scene.cycles.samples = 256
+#     bpy.context.scene.cycles.use_denoising = True
+#     bpy.context.scene.cycles.use_adaptive_sampling = True
+#     bpy.context.scene.cycles.adaptive_threshold = 0.1
+#     bpy.context.scene.render.resolution_x = 1920
+#     bpy.context.scene.render.resolution_y = 1080
+#     bpy.context.scene.render.resolution_percentage = 100
+#     bpy.context.scene.use_nodes = True
+#     bpy.context.scene.render.use_compositing = True
+#     bpy.context.scene.render.use_sequencer = True
 
 def setup_animation_settings(obj_folder):
     """Configure animation and frame settings"""
