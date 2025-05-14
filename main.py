@@ -2,10 +2,11 @@ import pickle
 import os
 import numpy as np
 import torch
+
 from visualize.format_sequences import format_joint_sequences
 from visualize.vis_utils import npy2obj
 from visualize.converter import traj_interpolator
-from visualize.const import *
+from blender.const import *
 
 import argparse
 
@@ -25,18 +26,19 @@ def load_data(data_file):
     p1_jnts_refine = data[KEY_REFINE_P1_JNTS]
     p2_jnts_refine = data[KEY_REFINE_P2_JNTS]
     obj_verts_list_filtered = data[KEY_FILTERED_OBJ_VERTS]
-    
+        
     p1_jnts_input = p1_jnts_input.numpy() if torch.is_tensor(p1_jnts_input) else p1_jnts_input
     p2_jnts_input = p2_jnts_input.numpy() if torch.is_tensor(p2_jnts_input) else p2_jnts_input
     obj_verts_list_original = obj_verts_list_original.numpy() if torch.is_tensor(obj_verts_list_original) else obj_verts_list_original
     p1_jnts_refine = p1_jnts_refine.numpy() if torch.is_tensor(p1_jnts_refine) else p1_jnts_refine
     p2_jnts_refine = p2_jnts_refine.numpy() if torch.is_tensor(p2_jnts_refine) else p2_jnts_refine
     obj_verts_list_filtered = obj_verts_list_filtered.numpy() if torch.is_tensor(obj_verts_list_filtered) else obj_verts_list_filtered
-        
+    
     obj_faces_list = data[KEY_OBJ_FACES]
     data_type = data[KEY_TYPE]
-        
-    return p1_jnts_input, p2_jnts_input, obj_verts_list_original, p1_jnts_refine, p2_jnts_refine, obj_verts_list_filtered, obj_faces_list, data_type
+    cam_T = data[KEY_CAM_T]
+    
+    return p1_jnts_input, p2_jnts_input, obj_verts_list_original, p1_jnts_refine, p2_jnts_refine, obj_verts_list_filtered, obj_faces_list, data_type, cam_T
 
 
 def setup_directories(data_file):
@@ -81,7 +83,7 @@ def get_converters(data_dict, data_file):
     return converter1_input, converter2_input, converter1_refine, converter2_refine
 
 
-def save_obj_files(output_dir, dirs, converters, data_type):
+def save_obj_files(dirs, converters):
     num_frames = min([converter.num_frames for converter in converters])
     for frame_i in range(num_frames):
         for dir_path, converter in zip(dirs, converters):
@@ -93,11 +95,12 @@ def save_obj_files(output_dir, dirs, converters, data_type):
     print() # New line after progress bar completes
 
 
-def save_info(output_dir, data_type, root_loc1, root_loc2):
+def save_info(output_dir, data_type, root_loc1, root_loc2, cam_T):
     info = {
         INFO_ROOT_LOC_P1: root_loc1,
         INFO_ROOT_LOC_P2: root_loc2,
-        INFO_TYPE: data_type
+        INFO_TYPE: data_type,
+        INFO_CAM: cam_T
     }
     np.save(os.path.join(output_dir, INFO_FILE_NAME), info)
 
@@ -107,7 +110,7 @@ def main():
     data_file = args.data_file
 
     # Load data
-    p1_jnts_input, p2_jnts_input, obj_verts_list_original, p1_jnts_refine, p2_jnts_refine, obj_verts_list_filtered, obj_faces_list, data_type = load_data(data_file)
+    p1_jnts_input, p2_jnts_input, obj_verts_list_original, p1_jnts_refine, p2_jnts_refine, obj_verts_list_filtered, obj_faces_list, data_type, cam_T = load_data(data_file)
     
     # Format sequences
     data_dict = format_joint_sequences(p1_jnts_input, p2_jnts_input, p1_jnts_refine, p2_jnts_refine)
@@ -122,8 +125,8 @@ def main():
     output_dir, p1_input_dir, p2_input_dir, obj_original_dir, p1_refine_dir, p2_refine_dir, obj_filtered_dir = setup_directories(data_file)
     dirs = [p1_input_dir, p2_input_dir, p1_refine_dir, p2_refine_dir, obj_original_dir, obj_filtered_dir]
     
-    save_obj_files(output_dir, dirs, converters, data_type)
-    save_info(output_dir, data_type, converter1_input.get_traj(), converter2_input.get_traj())
+    save_obj_files(dirs, converters)
+    save_info(output_dir, data_type, converter1_input.get_traj(), converter2_input.get_traj(), cam_T)
 
 if __name__ == "__main__":
     main()

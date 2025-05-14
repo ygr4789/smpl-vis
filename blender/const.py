@@ -29,6 +29,14 @@ CACHE_SUFFIX = '_converters.pkl'
 INFO_ROOT_LOC_P1 = 'root_loc1'
 INFO_ROOT_LOC_P2 = 'root_loc2'
 INFO_TYPE = 'type'
-INFO_FILE_NAME = 'info'
+INFO_FILE_NAME = 'info.npy'
+INFO_CAM = 'cam'
 
 INTERPOLATE = 2.0
+
+TARGET_FLAG_NONE = 0
+TARGET_FLAG_INPUT = 1
+TARGET_FLAG_REFINE = 2
+
+VIDEO_DIR = "video"
+VIDEO_NAMES = ["obj_only", "input", "output"]

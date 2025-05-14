@@ -22,7 +22,10 @@ $(OUTPUT_DIR)/%: $(DATA_DIR)/%.pkl
 # Rule: run rendering only if previous step succeeded 
 $(OUTPUT_DIR)/%/.rendered: $(OUTPUT_DIR)/%
 	@echo "Rendering $*"
-	python $(RENDER_SCRIPT) $(OUTPUT_DIR)/$* -l
+	export PYTHONPATH=$PWD
+	blender --background --python $(RENDER_SCRIPT) -- -t 0 $(OUTPUT_DIR)/$*
+	blender --background --python $(RENDER_SCRIPT) -- -t 1 $(OUTPUT_DIR)/$*
+	blender --background --python $(RENDER_SCRIPT) -- -t 2 $(OUTPUT_DIR)/$*
 	touch $@
 	@echo "--------------------------------"
 	@echo "Video rendering completed for $* !"
