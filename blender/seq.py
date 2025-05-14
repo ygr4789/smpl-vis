@@ -100,6 +100,7 @@ def setup_low_quality_settings():
     bpy.context.scene.use_nodes = False
     bpy.context.scene.render.use_compositing = False
     bpy.context.scene.render.use_sequencer = False
+    bpy.context.scene.render.film_transparent = False
 
 def setup_high_quality_settings():
     """Configure settings for high-quality rendering"""
@@ -185,7 +186,7 @@ def prepare_obj_paths_and_materials(obj_folder, render_target):
         objs = [OBJ_OBJ_ORIGINAL, OBJ_P1_INPUT, OBJ_P2_INPUT]
         materials = ["Yellow", "Red", "Blue"]
     elif render_target == TARGET_FLAG_REFINE:
-        objs = [OBJ_OBJ_ORIGINAL, OBJ_P1_REFINE, OBJ_P2_REFINE]
+        objs = [OBJ_OBJ_FILTERED, OBJ_P1_REFINE, OBJ_P2_REFINE]
         materials = ["Yellow", "Red", "Blue"]
     else:
         objs = [OBJ_OBJ_ORIGINAL]
@@ -207,13 +208,11 @@ def main():
         print("Skipping GT data with target flag 0")
         return
     
-    blender_path = "blender/scene.blend"
     # Prepare object paths and materials
     obj_paths, obj_files, materials = prepare_obj_paths_and_materials(obj_folder, render_target)
     
-    
     # Load scene and setup
-    bpy.ops.wm.open_mainfile(filepath=blender_path)
+    bpy.ops.wm.open_mainfile(filepath=BLENDER_PATH)
     cleanup_existing_objects()
     setup_render_settings(render_high)
     setup_animation_settings(obj_folder)
@@ -233,9 +232,10 @@ def main():
     # Render animation
     camera_settings = prepare_camera_settings(root_loc1, root_loc2, camera_no, cam_T)
     for camera_setting in camera_settings:
-        video_path = os.path.join(data_path, camera_setting['text'])
-        os.makedirs(video_path, exist_ok=True)
-        bpy.context.scene.render.filepath = os.path.join(video_path, VIDEO_NAMES[render_target])
+        video_dir = os.path.join(data_path, VIDEO_NAMES[render_target])
+        video_name = VIDEO_NAMES[render_target] + "_" + camera_setting['text'] + ".mp4"
+        os.makedirs(video_dir, exist_ok=True)
+        bpy.context.scene.render.filepath = os.path.join(video_dir, video_name)
         bpy.context.scene.camera.location = camera_setting['location']
         bpy.context.scene.camera.rotation_euler = camera_setting['rotation']
         
@@ -243,6 +243,7 @@ def main():
         with stdout_redirected(keyword="Fra:", on_match=lambda line: line[:-1].encode()):
             bpy.ops.render.render(animation=True)
         print()
+        print(f"Saved to {video_dir} for {camera_setting['text']}")
 
 if __name__ == "__main__":
     main()

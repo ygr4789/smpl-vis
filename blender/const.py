@@ -40,3 +40,5 @@ TARGET_FLAG_REFINE = 2
 
 VIDEO_DIR = "video"
 VIDEO_NAMES = ["obj_only", "input", "output"]
+
+BLENDER_PATH = "blender/scene.blend"

@@ -4,8 +4,9 @@ import numpy as np
 import torch
 
 from visualize.format_sequences import format_joint_sequences
-from visualize.vis_utils import npy2obj
-from visualize.converter import traj_interpolator
+from visualize.converter_rot2obj import converter_rot2obj
+from visualize.converter_vf2obj import converter_vf2obj
+from visualize.jnt2rot_wrapper import jnt2rot_wrapper
 from blender.const import *
 
 import argparse
@@ -69,16 +70,20 @@ def get_converters(data_dict, data_file):
     if os.path.exists(cache_file):
         with open(cache_file, 'rb') as f:
             converters = pickle.load(f)
-            converter1_input, converter2_input, converter1_refine, converter2_refine = converters
+            motion_tensor_1_input, motion_tensor_2_input, motion_tensor_1_refine, motion_tensor_2_refine = converters
     else:
-        converter1_input = npy2obj(data_dict, sample_idx=0, device=0, interpolate=INTERPOLATE, cuda=True)
-        converter2_input = npy2obj(data_dict, sample_idx=1, device=0, interpolate=INTERPOLATE, cuda=True)
-        converter1_refine = npy2obj(data_dict, sample_idx=2, device=0, interpolate=INTERPOLATE, cuda=True)
-        converter2_refine = npy2obj(data_dict, sample_idx=3, device=0, interpolate=INTERPOLATE, cuda=True)
+        motion_tensor_1_input = jnt2rot_wrapper(data_dict, sample_idx=0, device=0, cuda=True).get_motion_tensor()
+        motion_tensor_2_input = jnt2rot_wrapper(data_dict, sample_idx=1, device=0, cuda=True).get_motion_tensor()
+        motion_tensor_1_refine = jnt2rot_wrapper(data_dict, sample_idx=2, device=0, cuda=True).get_motion_tensor()
+        motion_tensor_2_refine = jnt2rot_wrapper(data_dict, sample_idx=3, device=0, cuda=True).get_motion_tensor()
         os.makedirs(cache_dir, exist_ok=True)
-        
         with open(cache_file, 'wb') as f:
-            pickle.dump((converter1_input, converter2_input, converter1_refine, converter2_refine), f)
+            pickle.dump((motion_tensor_1_input, motion_tensor_2_input, motion_tensor_1_refine, motion_tensor_2_refine), f)
+        
+    converter1_input = converter_rot2obj(motion_tensor_1_input, interpolate=INTERPOLATE, device=0, cuda=True)
+    converter2_input = converter_rot2obj(motion_tensor_2_input, interpolate=INTERPOLATE, device=0, cuda=True)
+    converter1_refine = converter_rot2obj(motion_tensor_1_refine, interpolate=INTERPOLATE, device=0, cuda=True)
+    converter2_refine = converter_rot2obj(motion_tensor_2_refine, interpolate=INTERPOLATE, device=0, cuda=True)
             
     return converter1_input, converter2_input, converter1_refine, converter2_refine
 
@@ -117,8 +122,8 @@ def main():
     
     # Setup Converters
     converter1_input, converter2_input, converter1_refine, converter2_refine = get_converters(data_dict, data_file)
-    converter_obj_original = traj_interpolator(obj_verts_list_original, obj_faces_list, interpolate=INTERPOLATE)
-    converter_obj_filtered = traj_interpolator(obj_verts_list_filtered, obj_faces_list, interpolate=INTERPOLATE)
+    converter_obj_original = converter_vf2obj(obj_verts_list_original, obj_faces_list, interpolate=INTERPOLATE)
+    converter_obj_filtered = converter_vf2obj(obj_verts_list_filtered, obj_faces_list, interpolate=INTERPOLATE)
     converters = [converter1_input, converter2_input, converter1_refine, converter2_refine, converter_obj_original, converter_obj_filtered]
     
     # Setup directories

@@ -1,5 +1,8 @@
+# Script paths
 SMPL_SCRIPT := main.py
 RENDER_SCRIPT := blender/seq.py
+
+# Directory paths
 DATA_DIR := data
 OUTPUT_DIR := output
 CACHE_DIR := cache
@@ -16,17 +19,21 @@ all: $(RENDERED)
 
 # Rule: run main.py if .pkl is newer than output dir
 $(OUTPUT_DIR)/%: $(DATA_DIR)/%.pkl
-	@echo "Generating $@ from $<"
+	@echo "Generating .obj files from $<"
 	python $(SMPL_SCRIPT) $<
 
-# Rule: run rendering only if previous step succeeded 
+# Render meshes from different camera angles
+define render_sequence
+	PYTHONPATH=$$PWD blender --background --python $(RENDER_SCRIPT) -- -t $(1) -c 0 $(OUTPUT_DIR)/$(2)
+endef
+
+# Render meshes and mark as complete
 $(OUTPUT_DIR)/%/.rendered: $(OUTPUT_DIR)/%
 	@echo "Rendering $*"
-	export PYTHONPATH=$PWD
-	blender --background --python $(RENDER_SCRIPT) -- -t 0 $(OUTPUT_DIR)/$*
-	blender --background --python $(RENDER_SCRIPT) -- -t 1 $(OUTPUT_DIR)/$*
-	blender --background --python $(RENDER_SCRIPT) -- -t 2 $(OUTPUT_DIR)/$*
-	touch $@
+	# $(call render_sequence,0,$*)
+	$(call render_sequence,1,$*)
+	$(call render_sequence,2,$*)
+	@touch $@
 	@echo "--------------------------------"
 	@echo "Video rendering completed for $* !"
 	@echo "--------------------------------"
@@ -34,12 +41,14 @@ $(OUTPUT_DIR)/%/.rendered: $(OUTPUT_DIR)/%
 
 .PRECIOUS: $(OUTPUT_DIR)/%
 
-# Clean all outputs
-clean:
-	rm -rf $(OUTPUT_DIR)/*
+clean: clean-cache clean-output clean-rendered
+
+clean-cache:
 	rm -rf $(CACHE_DIR)/*
-	
-# Clean only .rendered files
+
+clean-objs:
+	rm -rf $(OUTPUT_DIR)/*
+
 clean-rendered:
 	rm -f $(OUTPUT_DIR)/*/.rendered
 	
