@@ -27,13 +27,8 @@ def get_camera_params(camera_no):
     else:
         raise ValueError(f"Camera no. {camera_no} does not exist")
 
-def prepare_camera_settings(root_loc1, root_loc2, camera_no, cam_T):
+def prepare_camera_settings(root_loc1, root_loc2, camera_no, cam_T=None):
     """Adjust camera position by doubling its location vector"""
-    root_loc1[:, [1, 2]] = root_loc1[:, [2, 1]]  # y,z -> z,y
-    root_loc2[:, [1, 2]] = root_loc2[:, [2, 1]]  # y,z -> z,y
-    root_loc1[:, 1] *= -1  # flip y
-    root_loc2[:, 1] *= -1  # flip y
-    
     root_loc1_mean = np.mean(root_loc1, axis=0)
     root_loc2_mean = np.mean(root_loc2, axis=0)
     center = (root_loc1_mean + root_loc2_mean) / 2

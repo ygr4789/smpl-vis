@@ -101,6 +101,12 @@ def save_obj_files(dirs, converters):
 
 
 def save_info(output_dir, data_type, root_loc1, root_loc2, cam_T):
+    # Convert to blender coordinate system (y,z -> z,y and flip y)
+    root_loc1[:, [1, 2]] = root_loc1[:, [2, 1]]  # y,z -> z,y
+    root_loc2[:, [1, 2]] = root_loc2[:, [2, 1]]  # y,z -> z,y
+    root_loc1[:, 1] *= -1  # flip y
+    root_loc2[:, 1] *= -1  # flip y
+    
     info = {
         INFO_ROOT_LOC_P1: root_loc1,
         INFO_ROOT_LOC_P2: root_loc2,

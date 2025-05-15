@@ -227,13 +227,13 @@ def main():
     
     # Create output directory
     os.makedirs(VIDEO_DIR, exist_ok=True)
-    data_path = os.path.join(VIDEO_DIR, os.path.basename(obj_folder))
+    data_name = os.path.basename(obj_folder)
+    video_dir = os.path.join(VIDEO_DIR, 'smpl_' + data_name)
     
     # Render animation
     camera_settings = prepare_camera_settings(root_loc1, root_loc2, camera_no, cam_T)
     for camera_setting in camera_settings:
-        video_dir = os.path.join(data_path, VIDEO_NAMES[render_target])
-        video_name = VIDEO_NAMES[render_target] + "_" + camera_setting['text'] + ".mp4"
+        video_name = f"{VIDEO_NAMES[render_target]}_{camera_setting['text']}.mp4"
         os.makedirs(video_dir, exist_ok=True)
         bpy.context.scene.render.filepath = os.path.join(video_dir, video_name)
         bpy.context.scene.camera.location = camera_setting['location']
