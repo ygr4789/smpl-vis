@@ -18,7 +18,8 @@ python main.py data/sample.pkl
 
 blender command in blender 4:
 ```
-blender --background --python blender/seq.py -- output/sample
+PYTHONPATH=$PWD blender --background --python blender/render_smpl.py -- output/sample
+PYTHONPATH=$PWD blender --background --python blender/render_prim.py -- output/sample
 ```
 The script accepts the following flags:
 
@@ -38,6 +39,6 @@ The script accepts the following flags:
 Example commands
 
 ```
-blender --background --python blender/seq.py -- output/sample -t 1 -c 0 -q
+PYTHONPATH=$PWD blender --background --python blender/render_smpl.py -- output/sample -t 1 -c 0 -q
 ```
 

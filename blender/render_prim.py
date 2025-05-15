@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from blender.camera import prepare_camera_settings
 from blender.const import *
 from blender.prim import *
+from blender.config import setup_render_settings, setup_animation_settings, stdout_redirected
 
 def parse_arguments():
     # Get all arguments after "--"
@@ -20,7 +21,7 @@ def parse_arguments():
 
     # Create argument parser
     parser = argparse.ArgumentParser(description='Render SMPL visualization in Blender')
-    parser.add_argument('data_file', type=str, help='Path to pkl data file')
+    parser.add_argument('obj_folder', type=str, help='Path to pkl data file')
     parser.add_argument('-q', '--high', action='store_true', help='Use high quality rendering settings')
     parser.add_argument('-t', '--target', type=int, choices=[0, 1, 2], 
                        help='Render target: 0=object only, 1=input motion, 2=refined motion', 
@@ -29,116 +30,12 @@ def parse_arguments():
     
     return parser.parse_args(argv)
 
-@contextmanager
-def stdout_redirected(keyword=None, on_match=None):
-    """
-    Redirect stdout to a pipe and scan it live for a keyword.
-    If found, call `on_match(line)` or print it.
-    """
-    original_fd = sys.stdout.fileno()
-    saved_fd = os.dup(original_fd)
-
-    read_fd, write_fd = os.pipe()
-
-    def reader():
-        with os.fdopen(read_fd) as read_pipe:
-            string = ""
-            for line in iter(read_pipe.readline, ''):
-                if keyword is not None and keyword in line and on_match:
-                    os.write(saved_fd, b'\r')
-                    os.write(saved_fd, b' ' * len(string))
-                    os.write(saved_fd, b'\r')
-                    string = on_match(line)
-                    os.write(saved_fd, string)
-
-    thread = threading.Thread(target=reader, daemon=True)
-    thread.start()
-
-    os.dup2(write_fd, original_fd)
-    try:
-        yield
-    finally:
-        os.dup2(saved_fd, original_fd)
-        os.close(write_fd)
-        thread.join()
-        os.close(saved_fd)
-
-def setup_render_settings(render_high):
-    """Configure render settings based on quality mode"""
-    bpy.context.scene.render.film_transparent = True
-    bpy.context.scene.render.image_settings.file_format = 'FFMPEG'
-    bpy.context.scene.render.ffmpeg.format = 'MPEG4'
-    bpy.context.scene.render.ffmpeg.codec = 'H264'
-
-    if render_high:
-        setup_high_quality_settings()
-    else:
-        setup_low_quality_settings()
-
-def setup_low_quality_settings():
-    """Configure settings for fast, low-quality rendering"""
-    
-    if bpy.app.version >= (4, 2, 0):
-        bpy.context.scene.render.engine = 'BLENDER_EEVEE_NEXT'
-        bpy.context.scene.render.resolution_x = 3840
-        bpy.context.scene.render.resolution_y = 2160
-        bpy.context.scene.render.resolution_percentage = 100
-    else:
-        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-        bpy.context.scene.render.resolution_x = 1280
-        bpy.context.scene.render.resolution_y = 720
-        bpy.context.scene.render.resolution_percentage = 50
-
-    # Use hasattr to avoid attribute errors
-    eevee = getattr(bpy.context.scene, 'eevee', None)
-    if eevee:
-        if hasattr(eevee, 'taa_render_samples'):
-            eevee.taa_render_samples = 16
-        for attr in ['use_soft_shadows', 'use_bloom', 'use_ssr', 'use_ssr_refraction']:
-            if hasattr(eevee, attr):
-                setattr(eevee, attr, False)
-
-    bpy.context.scene.use_nodes = False
-    bpy.context.scene.render.use_compositing = False
-    bpy.context.scene.render.use_sequencer = False
-    bpy.context.scene.render.film_transparent = False
-
-def setup_high_quality_settings():
-    """Configure settings for high-quality rendering"""
-    bpy.context.scene.render.engine = 'CYCLES'
-    bpy.context.scene.cycles.samples = 256
-    bpy.context.scene.cycles.use_denoising = False # device issue
-    bpy.context.scene.cycles.use_adaptive_sampling = True
-    bpy.context.scene.cycles.adaptive_threshold = 0.1
-    bpy.context.scene.render.resolution_x = 1920
-    bpy.context.scene.render.resolution_y = 1080
-    bpy.context.scene.render.resolution_percentage = 100
-    bpy.context.scene.use_nodes = True
-    bpy.context.scene.render.use_compositing = True
-    bpy.context.scene.render.use_sequencer = True
-
-def setup_animation_settings(num_frames):
-    """Configure animation and frame settings"""
-    bpy.context.scene.render.fps = 30
-    bpy.context.scene.render.fps_base = 1
-    bpy.context.scene.frame_start = 1
-    # Double frames for interpolation
-    bpy.context.scene.frame_end = num_frames * 2 - 1
-
 def cleanup_existing_objects():
     """Remove existing mesh objects except Plane"""
     for obj in bpy.data.objects:
         if obj.type == 'MESH' and obj.name != 'Plane':
             bpy.data.objects.remove(obj, do_unlink=True)
 
-def create_sphere_for_joint(material, joint_idx, radius=0.05):
-    """Create sphere object for joint visualization"""
-    # Set different radius for each joint
-    joint_radius = joint_radii.get(joint_idx, radius)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=joint_radius)
-    sphere = bpy.context.active_object
-    sphere.data.materials.append(bpy.data.materials[material])
-    return sphere
 
 def create_mesh_for_frame(verts, faces, frame_num, material):
     """Create mesh object for a specific frame"""
@@ -182,9 +79,9 @@ def setup_keyframes(obj, frame_num):
     obj.keyframe_insert(data_path="hide_render", frame=frame_num + 1)
     obj.keyframe_insert(data_path="hide_viewport", frame=frame_num + 1)
 
-def load_info(data_file):
+def load_info(obj_folder):
     """Load root locations from numpy file if available"""
-    root_locs_path = os.path.join(data_file, INFO_FILE_NAME)
+    root_locs_path = os.path.join(obj_folder, INFO_FILE_NAME)
     if os.path.exists(root_locs_path):
         info = np.load(root_locs_path, allow_pickle=True).item()
         data_type = info[INFO_TYPE]
@@ -194,6 +91,17 @@ def load_info(data_file):
         return data_type, root_loc1, root_loc2, cam_T
     else:
         raise FileNotFoundError(f"No info file found at: {root_locs_path}")
+        
+def create_sphere_for_joint(material, joint_idx, radius=0.05):
+    """Create sphere object for joint visualization"""
+    # Set different radius for each joint
+    joint_radius = joint_radii.get(joint_idx, radius)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=joint_radius)
+    sphere = bpy.context.active_object
+    sphere.data.materials.append(bpy.data.materials[material])
+    with bpy.context.temp_override(selected_editable_objects=[sphere]):
+        bpy.ops.object.shade_smooth()
+    return sphere
 
 def create_bone_cone(joint1_pos, joint2_pos, material, bone_idx, radius=0.03):
     """Create a cone object connecting two joints to represent a bone"""
@@ -201,11 +109,18 @@ def create_bone_cone(joint1_pos, joint2_pos, material, bone_idx, radius=0.03):
     direction = joint2_pos - joint1_pos
     length = np.linalg.norm(direction)
     direction = direction / length
-    
-    # Create cone
-    bpy.ops.mesh.primitive_cone_add(radius1=radius, radius2=0, depth=length)
+    # Create cylinder
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=length)
     cone = bpy.context.active_object
+    with bpy.context.temp_override(selected_editable_objects=[cone]):
+        bpy.ops.object.shade_smooth()
     
+    # Add loop cuts to sides
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    # Use subdivide instead of loopcut since it doesn't require view3d context
+    bpy.ops.mesh.subdivide(number_cuts=10)
+    bpy.ops.object.mode_set(mode='OBJECT')
     # Position and rotate cone
     cone.location = (joint1_pos + joint2_pos) / 2
     
@@ -227,9 +142,9 @@ def create_bone_cone(joint1_pos, joint2_pos, material, bone_idx, radius=0.03):
     
     return cone
 
-def load_data(data_file):
+def load_data(obj_folder):
     """Load and validate data from npz file"""
-    npz_file = os.path.splitext(data_file)[0] + '.npz'
+    npz_file = os.path.join(obj_folder, PRIM_FILE_NAME)
     if not os.path.exists(npz_file):
         raise FileNotFoundError(f"No npz file found at: {npz_file}")
         
@@ -316,10 +231,9 @@ def update_bone_position(cone, joint1_pos, joint2_pos, frame):
     cone.keyframe_insert(data_path="location", frame=frame)
     cone.keyframe_insert(data_path="rotation_axis_angle", frame=frame)
 
-def render_animation(data_path, render_target, camera_settings, num_frames):
+def render_animation(video_dir, render_target, camera_settings, num_frames):
     """Render animation from different camera angles"""
     for camera_setting in camera_settings:
-        video_dir = os.path.join(data_path, VIDEO_NAMES[render_target])
         video_name = VIDEO_NAMES[render_target] + "_" + camera_setting['text'] + ".mp4"
         os.makedirs(video_dir, exist_ok=True)
         bpy.context.scene.render.filepath = os.path.join(video_dir, video_name)
@@ -334,13 +248,13 @@ def render_animation(data_path, render_target, camera_settings, num_frames):
 
 def main():
     args = parse_arguments()
-    data_file = args.data_file
+    obj_folder = args.obj_folder
     render_high = args.high
     render_target = args.target
     camera_no = args.camera
     
     # Load data
-    data = load_data(data_file)
+    data = load_data(obj_folder)
     p1_jnts_input = data[KEY_INPUT_P1_JNTS]
     p2_jnts_input = data[KEY_INPUT_P2_JNTS]
     obj_verts_list_original = data[KEY_ORIGINAL_OBJ_VERTS]
@@ -361,7 +275,9 @@ def main():
     
     # Select vertices and joints based on render target
     verts_list = obj_verts_list_filtered if render_target == TARGET_FLAG_REFINE else obj_verts_list_original
-    setup_animation_settings(len(verts_list))
+    
+    num_frames = len(verts_list)*2-1
+    setup_animation_settings(num_frames)
     
     # Create joints and bones if needed
     if render_target != TARGET_FLAG_NONE:
@@ -380,10 +296,10 @@ def main():
     
     # Create output directory and render
     os.makedirs(VIDEO_DIR, exist_ok=True)
-    data_path = os.path.join(VIDEO_DIR, 'prim_' + os.path.splitext(os.path.basename(data_file))[0])
+    video_dir = os.path.join(VIDEO_DIR, 'prim_' + os.path.splitext(os.path.basename(obj_folder))[0])
     
     camera_settings = prepare_camera_settings(p1_jnts_input[:,0,:], p2_jnts_input[:,0,:], camera_no)
-    render_animation(data_path, render_target, camera_settings, len(verts_list)*2-1)
+    render_animation(video_dir, render_target, camera_settings, num_frames)
 
 if __name__ == "__main__":
     main()

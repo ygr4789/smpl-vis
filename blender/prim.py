@@ -44,30 +44,30 @@ BONE_LEFT_HAND = 17
 BONE_RIGHT_HAND = 18
 
 joint_radii = {
-    JOINT_GLOBAL: 0.04,  # Global
-    JOINT_LEFT_HIP: 0.02,  # Left hip
-    JOINT_RIGHT_HIP: 0.02,  # Right hip
+    JOINT_GLOBAL: 0.05,  # Global
+    JOINT_LEFT_HIP: 0.03,  # Left hip
+    JOINT_RIGHT_HIP: 0.03,  # Right hip
     JOINT_SPINE1: 0.03,  # Spine1
-    JOINT_LEFT_KNEE: 0.02,  # Left knee
-    JOINT_RIGHT_KNEE: 0.02,  # Right knee
-    JOINT_SPINE2: 0.02,  # Spine2
-    JOINT_LEFT_ANKLE: 0.02,  # Left ankle
-    JOINT_RIGHT_ANKLE: 0.02,  # Right ankle
-    JOINT_SPINE3: 0.02,  # Spine3
-    JOINT_LEFT_TOE: 0.02, # Left toe
-    JOINT_RIGHT_TOE: 0.02, # Right toe
-    JOINT_NECK: 0.04, # Neck
-    JOINT_LEFT_COLLAR: 0.02, # Left collar
-    JOINT_RIGHT_COLLAR: 0.02, # Right collar
-    JOINT_HEAD: 0.07, # Head
-    JOINT_LEFT_SHOULDER: 0.02, # Left shoulder
-    JOINT_RIGHT_SHOULDER: 0.02, # Right shoulder
-    JOINT_LEFT_ELBOW: 0.02, # Left elbow
-    JOINT_RIGHT_ELBOW: 0.02, # Right elbow
-    JOINT_LEFT_WRIST: 0.02, # Left wrist
-    JOINT_RIGHT_WRIST: 0.02, # Right wrist
-    JOINT_LEFT_PALM: 0.04, # Left palm
-    JOINT_RIGHT_PALM: 0.04  # Right palm
+    JOINT_LEFT_KNEE: 0.03,  # Left knee
+    JOINT_RIGHT_KNEE: 0.03,  # Right knee
+    JOINT_SPINE2: 0.03,  # Spine2
+    JOINT_LEFT_ANKLE: 0.03,  # Left ankle
+    JOINT_RIGHT_ANKLE: 0.03,  # Right ankle
+    JOINT_SPINE3: 0.03,  # Spine3
+    JOINT_LEFT_TOE: 0.03, # Left toe
+    JOINT_RIGHT_TOE: 0.03, # Right toe
+    JOINT_NECK: 0.03, # Neck
+    JOINT_LEFT_COLLAR: 0.03, # Left collar
+    JOINT_RIGHT_COLLAR: 0.03, # Right collar
+    JOINT_HEAD: 0.08, # Head
+    JOINT_LEFT_SHOULDER: 0.03, # Left shoulder
+    JOINT_RIGHT_SHOULDER: 0.03, # Right shoulder
+    JOINT_LEFT_ELBOW: 0.03, # Left elbow
+    JOINT_RIGHT_ELBOW: 0.03, # Right elbow
+    JOINT_LEFT_WRIST: 0.03, # Left wrist
+    JOINT_RIGHT_WRIST: 0.03, # Right wrist
+    JOINT_LEFT_PALM: 0.05, # Left palm
+    JOINT_RIGHT_PALM: 0.05  # Right palm
 }
 
 bone_pair = {

@@ -88,6 +88,11 @@ def get_converters(data_dict, data_file):
     return converter1_input, converter2_input, converter1_refine, converter2_refine
 
 
+def convert_to_blender_coordinates(data):
+    data[..., [1, 2]] = data[..., [2, 1]]
+    data[..., 1] *= -1
+    return data
+
 def save_obj_files(dirs, converters):
     num_frames = min([converter.num_frames for converter in converters])
     for frame_i in range(num_frames):
@@ -101,11 +106,8 @@ def save_obj_files(dirs, converters):
 
 
 def save_info(output_dir, data_type, root_loc1, root_loc2, cam_T):
-    # Convert to blender coordinate system (y,z -> z,y and flip y)
-    root_loc1[:, [1, 2]] = root_loc1[:, [2, 1]]  # y,z -> z,y
-    root_loc2[:, [1, 2]] = root_loc2[:, [2, 1]]  # y,z -> z,y
-    root_loc1[:, 1] *= -1  # flip y
-    root_loc2[:, 1] *= -1  # flip y
+    root_loc1 = convert_to_blender_coordinates(root_loc1)
+    root_loc2 = convert_to_blender_coordinates(root_loc2)
     
     info = {
         INFO_ROOT_LOC_P1: root_loc1,
@@ -114,7 +116,7 @@ def save_info(output_dir, data_type, root_loc1, root_loc2, cam_T):
         INFO_CAM: cam_T
     }
     np.save(os.path.join(output_dir, INFO_FILE_NAME), info)
-
+    
 
 def main():
     args = parse_args()
@@ -138,6 +140,18 @@ def main():
     
     save_obj_files(dirs, converters)
     save_info(output_dir, data_type, converter1_input.get_traj(), converter2_input.get_traj(), cam_T)
+    
+    prim_npz_path = os.path.join(output_dir, PRIM_FILE_NAME)
+    # Save data as npz file
+    np.savez(prim_npz_path,
+             **{KEY_INPUT_P1_JNTS: convert_to_blender_coordinates(p1_jnts_input),
+                KEY_INPUT_P2_JNTS: convert_to_blender_coordinates(p2_jnts_input),
+                KEY_ORIGINAL_OBJ_VERTS: convert_to_blender_coordinates(obj_verts_list_original),
+                KEY_REFINE_P1_JNTS: convert_to_blender_coordinates(p1_jnts_refine),
+                KEY_REFINE_P2_JNTS: convert_to_blender_coordinates(p2_jnts_refine),
+                KEY_FILTERED_OBJ_VERTS: convert_to_blender_coordinates(obj_verts_list_filtered),
+                KEY_OBJ_FACES: obj_faces_list,
+                KEY_TYPE: data_type})
 
 if __name__ == "__main__":
     main()

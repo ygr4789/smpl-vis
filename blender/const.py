@@ -32,6 +32,8 @@ INFO_TYPE = 'type'
 INFO_FILE_NAME = 'info.npy'
 INFO_CAM = 'cam'
 
+PRIM_FILE_NAME = 'prim.npz'
+
 INTERPOLATE = 2.0
 
 TARGET_FLAG_NONE = 0
