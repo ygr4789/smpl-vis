@@ -9,7 +9,7 @@ import argparse
 import visualize.utils.rotation_conversions as geometry
 from visualize.joints2smpl.src import config
 from visualize.joints2smpl.src.smplify import SMPLify3D
-from visualize.configs import right_hand_pose, left_hand_pose
+from visualize.config import right_hand_pose, left_hand_pose
 
 class joints2smpl:
     def __init__(self, num_frames, device_id, cuda=True):

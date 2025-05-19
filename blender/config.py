@@ -62,9 +62,12 @@ def setup_low_quality_settings():
         bpy.context.scene.render.resolution_percentage = 100
     else:
         bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-        bpy.context.scene.render.resolution_x = 1920
-        bpy.context.scene.render.resolution_y = 1080
-        bpy.context.scene.render.resolution_percentage = 100
+        # bpy.context.scene.render.resolution_x = 1920
+        # bpy.context.scene.render.resolution_y = 1080
+        # bpy.context.scene.render.resolution_percentage = 100
+        bpy.context.scene.render.resolution_x = 1280
+        bpy.context.scene.render.resolution_y = 720
+        bpy.context.scene.render.resolution_percentage = 50
 
     # Use hasattr to avoid attribute errors
     eevee = getattr(bpy.context.scene, 'eevee', None)
@@ -106,7 +109,7 @@ def setup_animation_settings(num_frames):
 def render_animation(video_dir, render_target, camera_settings, num_frames):
     """Render animation from different camera angles"""
     for camera_setting in camera_settings:
-        video_name = VIDEO_NAMES[render_target] + "_" + camera_setting['text'] + ".mp4"
+        video_name = video_name_per_flag[render_target] + "_" + camera_setting['text'] + ".mp4"
         os.makedirs(video_dir, exist_ok=True)
         bpy.context.scene.render.filepath = os.path.join(video_dir, video_name)
         bpy.context.scene.camera.location = camera_setting['location']
@@ -116,4 +119,4 @@ def render_animation(video_dir, render_target, camera_settings, num_frames):
         with stdout_redirected(keyword="Fra:", on_match=lambda line: line[:-1].encode()):
             bpy.ops.render.render(animation=True)
         print()
-        print(f"Saved to {video_dir} for {camera_setting['text']}")
+        print(f"Saved to {video_dir} for {video_name_per_flag[render_target]} {camera_setting['text']}")

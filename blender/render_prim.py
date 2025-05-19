@@ -19,12 +19,12 @@ def parse_arguments():
 
     # Create argument parser
     parser = argparse.ArgumentParser(description='Render SMPL visualization in Blender')
-    parser.add_argument('obj_folder', type=str, help='Path to pkl data file')
+    parser.add_argument('-i', '--input', type=str, help='Path to obj output folder (input)')
+    parser.add_argument('-o', '--output', type=str, help='Path to output video folder (output)')
     parser.add_argument('-q', '--high', action='store_true', help='Use high quality rendering settings')
-    parser.add_argument('-t', '--target', type=int, choices=[0, 1, 2], 
-                       help='Render target: 0=object only, 1=input motion, 2=refined motion', 
-                       default=TARGET_FLAG_REFINE)
+    parser.add_argument('-t', '--target', type=int, choices=list(keys_to_render_per_flag.keys()), help='Render target: 0=object only, 1=input motion, 2=refined motion, ... (see const.py)', default=TARGET_FLAG_REFINE)
     parser.add_argument('-c', '--camera', type=int, help='Camera number, -1 for all cameras', default=-1)
+    parser.add_argument('-s', '--soft', action='store_true', help='Use soft material')
     
     return parser.parse_args(argv)
 
@@ -229,59 +229,102 @@ def update_bone_position(cone, joint1_pos, joint2_pos, frame):
     cone.keyframe_insert(data_path="location", frame=frame)
     cone.keyframe_insert(data_path="rotation_axis_angle", frame=frame)
 
+def load_data_for_target(obj_folder, render_target):
+    """Load data based on render target flag"""
+    data = load_data(obj_folder)
+    keys_to_load = keys_to_render_per_flag[render_target]
+    
+    # Initialize data dictionary
+    loaded_data = {}
+    
+    # Load data for each key
+    for key in keys_to_load:
+        if key in data:
+            loaded_data[key] = data[key]
+        else:
+            print(f"Warning: Key {key} not found in data file")
+            
+    return loaded_data
+
 def main():
     args = parse_arguments()
-    obj_folder = args.obj_folder
+    obj_folder = args.input
+    video_dir = args.output
     render_high = args.high
     render_target = args.target
     camera_no = args.camera
+    soft = args.soft
     
-    # Load data
-    data = load_data(obj_folder)
-    p1_jnts_input = data[KEY_INPUT_P1_JNTS]
-    p2_jnts_input = data[KEY_INPUT_P2_JNTS]
-    obj_verts_list_original = data[KEY_ORIGINAL_OBJ_VERTS]
-    p1_jnts_refine = data[KEY_REFINE_P1_JNTS]
-    p2_jnts_refine = data[KEY_REFINE_P2_JNTS]
-    obj_verts_list_filtered = data[KEY_FILTERED_OBJ_VERTS]
-    obj_faces_list = data[KEY_OBJ_FACES]
-    data_type = data[KEY_TYPE]
-    
-    if data_type == TYPE_GT and render_target == TARGET_FLAG_NONE:
-        print("Skipping GT data with target flag 0")
-        return
+    # Load data based on render target
+    print(f"Loading data for target flag {render_target}...")
+    data = load_data_for_target(obj_folder, render_target)
     
     # Load scene and setup
     bpy.ops.wm.open_mainfile(filepath=BLENDER_PATH)
     cleanup_existing_objects()
     setup_render_settings(render_high)
     
-    # Select vertices and joints based on render target
-    verts_list = obj_verts_list_filtered if render_target == TARGET_FLAG_REFINE else obj_verts_list_original
+    # Get object vertices and faces
+    if KEY_FILTERED_OBJ_VERTS in data:
+        verts_list = data[KEY_FILTERED_OBJ_VERTS]
+    elif KEY_ORIGINAL_OBJ_VERTS in data:
+        verts_list = data[KEY_ORIGINAL_OBJ_VERTS]
+    else:
+        raise ValueError("No object vertices found in data")
+        
+    obj_faces_list = data[KEY_OBJ_FACES]
     
     num_frames = len(verts_list)*2-1
     setup_animation_settings(num_frames)
     
     # Create joints and bones if needed
+    p1_joints = None
+    p2_joints = None
     if render_target != TARGET_FLAG_NONE:
-        p1_joints = p1_jnts_refine if render_target == TARGET_FLAG_REFINE else p1_jnts_input
-        p2_joints = p2_jnts_refine if render_target == TARGET_FLAG_REFINE else p2_jnts_input
-        p1_spheres, p2_spheres, p1_bones, p2_bones = create_joints_and_bones(p1_joints, p2_joints)
+        # Get joint data based on render target
+        if KEY_REFINE_P1_JNTS in data and KEY_REFINE_P2_JNTS in data:
+            p1_joints = data[KEY_REFINE_P1_JNTS]
+            p2_joints = data[KEY_REFINE_P2_JNTS]
+        elif KEY_INPUT_P1_JNTS in data and KEY_INPUT_P2_JNTS in data:
+            p1_joints = data[KEY_INPUT_P1_JNTS]
+            p2_joints = data[KEY_INPUT_P2_JNTS]
+        elif KEY_GT_P1_JNTS in data and KEY_GT_P2_JNTS in data:
+            p1_joints = data[KEY_GT_P1_JNTS]
+            p2_joints = data[KEY_GT_P2_JNTS]
+        elif KEY_PSEUDO_GT_P1_JNTS in data and KEY_PSEUDO_GT_P2_JNTS in data:
+            p1_joints = data[KEY_PSEUDO_GT_P1_JNTS]
+            p2_joints = data[KEY_PSEUDO_GT_P2_JNTS]
+        elif KEY_REFINE_PSEUDO_GT_P1_JNTS in data and KEY_REFINE_PSEUDO_GT_P2_JNTS in data:
+            p1_joints = data[KEY_REFINE_PSEUDO_GT_P1_JNTS]
+            p2_joints = data[KEY_REFINE_PSEUDO_GT_P2_JNTS]
+            
+        if p1_joints is not None and p2_joints is not None:
+            p1_spheres, p2_spheres, p1_bones, p2_bones = create_joints_and_bones(p1_joints, p2_joints)
     
     # Create object meshes
     create_object_meshes(verts_list, obj_faces_list)
     
-    # Update joint and bone positions
-    if render_target != TARGET_FLAG_NONE:
+    # Update joint and bone positions if they exist
+    if p1_joints is not None and p2_joints is not None:
         print("Updating joint positions and bones...")
         for frame_num in range(1, len(verts_list)):
             update_joints_and_bones(frame_num, p1_joints, p2_joints, p1_spheres, p2_spheres, p1_bones, p2_bones)
     
     # Create output directory and render
     os.makedirs(VIDEO_DIR, exist_ok=True)
-    video_dir = os.path.join(VIDEO_DIR, 'prim_' + os.path.splitext(os.path.basename(obj_folder))[0])
+    if video_dir is None:
+        data_name = os.path.basename(obj_folder)
+        video_dir = os.path.join(VIDEO_DIR, f'prim_{video_name_per_flag[render_target]}_{data_name}')
+    else:
+        video_dir = os.path.join(VIDEO_DIR, 'prim_' + os.path.splitext(os.path.basename(obj_folder))[0])
     
-    camera_settings = prepare_camera_settings(p1_jnts_input[:,0,:], p2_jnts_input[:,0,:], camera_no)
+    # Get camera settings using first frame joint positions if available
+    if p1_joints is not None and p2_joints is not None:
+        camera_settings = prepare_camera_settings(p1_joints[:,0,:], p2_joints[:,0,:], camera_no)
+    else:
+        # Fallback to using object vertices for camera settings
+        camera_settings = prepare_camera_settings(verts_list[0], verts_list[0], camera_no)
+        
     render_animation(video_dir, render_target, camera_settings, num_frames)
 
 if __name__ == "__main__":
