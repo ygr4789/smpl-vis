@@ -4,7 +4,7 @@ import sys
 import threading
 
 from contextlib import contextmanager
-from blender.const import *
+from visualize.const import *
 
 @contextmanager
 def stdout_redirected(keyword=None, on_match=None):

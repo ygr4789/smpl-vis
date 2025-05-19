@@ -7,7 +7,7 @@ from visualize.format_sequences import format_joint_sequences
 from visualize.converter_rot2obj import converter_rot2obj
 from visualize.converter_vf2obj import converter_vf2obj
 from visualize.jnt2rot_wrapper import jnt2rot_wrapper
-from blender.const import *
+from visualize.const import *
 
 import argparse
 

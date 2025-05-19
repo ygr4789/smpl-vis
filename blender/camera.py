@@ -2,7 +2,7 @@ import numpy as np
 import math
 import mathutils
 
-from .const import *
+from visualize.const import *
 
 def get_camera_params(camera_no):
     camera_params = [
