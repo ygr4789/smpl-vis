@@ -1,7 +1,8 @@
-from model.rotation2xyz import Rotation2xyz
 import torch
+import numpy as np
+import visualize.utils.rotation_conversions as geometry
+from visualize.rotation2xyz import Rotation2xyz
 from visualize.jnt2rot import joints2smpl
-import utils.rotation_conversions as geometry
 
 class jnt2rot_wrapper:
     def __init__(self, motion_dict, sample_idx, device=0, cuda=True):

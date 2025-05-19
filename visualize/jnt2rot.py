@@ -1,13 +1,14 @@
+import torch
 import numpy as np
 import os
-import torch
-from visualize.joints2smpl.src import config
+import sys
 import smplx
 import h5py
-from visualize.joints2smpl.src.smplify import SMPLify3D
 from tqdm import tqdm
-import utils.rotation_conversions as geometry
 import argparse
+import visualize.utils.rotation_conversions as geometry
+from visualize.joints2smpl.src import config
+from visualize.joints2smpl.src.smplify import SMPLify3D
 from visualize.configs import right_hand_pose, left_hand_pose
 
 class joints2smpl:

@@ -1,6 +1,7 @@
-import pickle
 import os
+import sys
 import numpy as np
+import pickle
 import torch
 
 from visualize.format_sequences import format_joint_sequences
@@ -8,13 +9,6 @@ from visualize.converter_rot2obj import converter_rot2obj
 from visualize.converter_vf2obj import converter_vf2obj
 from visualize.jnt2rot_wrapper import jnt2rot_wrapper
 from visualize.const import *
-
-import argparse
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='Process motion data file')
-    parser.add_argument('data_file', type=str, help='Path to the data file')
-    return parser.parse_args()
 
 
 def load_data(data_file):
@@ -118,10 +112,7 @@ def save_info(output_dir, data_type, root_loc1, root_loc2, cam_T):
     np.save(os.path.join(output_dir, INFO_FILE_NAME), info)
     
 
-def main():
-    args = parse_args()
-    data_file = args.data_file
-
+def process_pkl_file(data_file):
     # Load data
     p1_jnts_input, p2_jnts_input, obj_verts_list_original, p1_jnts_refine, p2_jnts_refine, obj_verts_list_filtered, obj_faces_list, data_type, cam_T = load_data(data_file)
     
@@ -152,6 +143,3 @@ def main():
                 KEY_FILTERED_OBJ_VERTS: convert_to_blender_coordinates(obj_verts_list_filtered),
                 KEY_OBJ_FACES: obj_faces_list,
                 KEY_TYPE: data_type})
-
-if __name__ == "__main__":
-    main()

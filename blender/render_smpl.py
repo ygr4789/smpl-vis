@@ -6,7 +6,7 @@ import numpy as np
 
 from blender.camera import prepare_camera_settings
 from blender.config import setup_render_settings, setup_animation_settings, stdout_redirected, render_animation
-from blender.const import *
+from visualize.const import *
 
 def parse_arguments():
     # Get all arguments after "--"

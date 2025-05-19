@@ -1,10 +1,10 @@
-from model.rotation2xyz import Rotation2xyz
 from trimesh import Trimesh
 import torch
-import utils.rotation_conversions as geometry
 import math 
 from visualize.converter import converter
 from visualize.smooth import smooth_motion
+from visualize.rotation2xyz import Rotation2xyz
+import visualize.utils.rotation_conversions as geometry
 
 class converter_rot2obj(converter):
     def __init__(self, motion_tensor, interpolate=1.0, device=0, cuda=True):
