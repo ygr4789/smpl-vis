@@ -83,7 +83,7 @@ def setup_low_quality_settings():
 def setup_high_quality_settings():
     """Configure settings for high-quality rendering"""
     bpy.context.scene.render.engine = 'CYCLES'
-    bpy.context.scene.cycles.samples = 256
+    bpy.context.scene.cycles.samples = 1024
     bpy.context.scene.cycles.use_denoising = False # device issue
     bpy.context.scene.cycles.use_adaptive_sampling = True
     bpy.context.scene.cycles.adaptive_threshold = 0.1
@@ -102,3 +102,18 @@ def setup_animation_settings(num_frames):
     bpy.context.scene.frame_start = 1
     # Double frames for interpolation
     bpy.context.scene.frame_end = num_frames
+    
+def render_animation(video_dir, render_target, camera_settings, num_frames):
+    """Render animation from different camera angles"""
+    for camera_setting in camera_settings:
+        video_name = VIDEO_NAMES[render_target] + "_" + camera_setting['text'] + ".mp4"
+        os.makedirs(video_dir, exist_ok=True)
+        bpy.context.scene.render.filepath = os.path.join(video_dir, video_name)
+        bpy.context.scene.camera.location = camera_setting['location']
+        bpy.context.scene.camera.rotation_euler = camera_setting['rotation']
+        
+        print(f"Rendering {num_frames} frames for {camera_setting['text']}...")
+        with stdout_redirected(keyword="Fra:", on_match=lambda line: line[:-1].encode()):
+            bpy.ops.render.render(animation=True)
+        print()
+        print(f"Saved to {video_dir} for {camera_setting['text']}")

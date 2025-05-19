@@ -5,10 +5,9 @@ import sys
 import numpy as np
 import threading
 
-from contextlib import contextmanager
 from blender.camera import prepare_camera_settings
 from blender.const import *
-from blender.config import setup_render_settings, setup_animation_settings, stdout_redirected
+from blender.config import setup_render_settings, setup_animation_settings, stdout_redirected, render_animation
 
 def parse_arguments():
     # Get all arguments after "--"
@@ -140,18 +139,7 @@ def main():
     
     # Render animation
     camera_settings = prepare_camera_settings(root_loc1, root_loc2, camera_no, cam_T)
-    for camera_setting in camera_settings:
-        video_name = f"{VIDEO_NAMES[render_target]}_{camera_setting['text']}.mp4"
-        os.makedirs(video_dir, exist_ok=True)
-        bpy.context.scene.render.filepath = os.path.join(video_dir, video_name)
-        bpy.context.scene.camera.location = camera_setting['location']
-        bpy.context.scene.camera.rotation_euler = camera_setting['rotation']
-        
-        print(f"Rendering {num_frames} frames for {camera_setting['text']}...")
-        with stdout_redirected(keyword="Fra:", on_match=lambda line: line[:-1].encode()):
-            bpy.ops.render.render(animation=True)
-        print()
-        print(f"Saved to {video_dir} for {camera_setting['text']}")
+    render_animation(video_dir, render_target, camera_settings, num_frames)
 
 if __name__ == "__main__":
     main()

@@ -43,32 +43,6 @@ BONE_RIGHT_LOWER_ARM = 16
 BONE_LEFT_HAND = 17
 BONE_RIGHT_HAND = 18
 
-joint_radii = {
-    JOINT_GLOBAL: 0.05,  # Global
-    JOINT_LEFT_HIP: 0.03,  # Left hip
-    JOINT_RIGHT_HIP: 0.03,  # Right hip
-    JOINT_SPINE1: 0.03,  # Spine1
-    JOINT_LEFT_KNEE: 0.03,  # Left knee
-    JOINT_RIGHT_KNEE: 0.03,  # Right knee
-    JOINT_SPINE2: 0.03,  # Spine2
-    JOINT_LEFT_ANKLE: 0.03,  # Left ankle
-    JOINT_RIGHT_ANKLE: 0.03,  # Right ankle
-    JOINT_SPINE3: 0.03,  # Spine3
-    JOINT_LEFT_TOE: 0.03, # Left toe
-    JOINT_RIGHT_TOE: 0.03, # Right toe
-    JOINT_NECK: 0.03, # Neck
-    JOINT_LEFT_COLLAR: 0.03, # Left collar
-    JOINT_RIGHT_COLLAR: 0.03, # Right collar
-    JOINT_HEAD: 0.08, # Head
-    JOINT_LEFT_SHOULDER: 0.03, # Left shoulder
-    JOINT_RIGHT_SHOULDER: 0.03, # Right shoulder
-    JOINT_LEFT_ELBOW: 0.03, # Left elbow
-    JOINT_RIGHT_ELBOW: 0.03, # Right elbow
-    JOINT_LEFT_WRIST: 0.03, # Left wrist
-    JOINT_RIGHT_WRIST: 0.03, # Right wrist
-    JOINT_LEFT_PALM: 0.05, # Left palm
-    JOINT_RIGHT_PALM: 0.05  # Right palm
-}
 
 bone_pair = {
   BONE_SPINE1: [JOINT_GLOBAL, JOINT_SPINE1],
@@ -90,4 +64,53 @@ bone_pair = {
   BONE_RIGHT_LOWER_ARM: [JOINT_RIGHT_ELBOW, JOINT_RIGHT_WRIST],
   BONE_LEFT_HAND: [JOINT_LEFT_WRIST, JOINT_LEFT_PALM],
   BONE_RIGHT_HAND: [JOINT_RIGHT_WRIST, JOINT_RIGHT_PALM],
+}
+
+joint_radii = {
+  JOINT_GLOBAL: 0.04,  # Global
+  JOINT_LEFT_HIP: 0.07,  # Left hip
+  JOINT_RIGHT_HIP: 0.07,  # Right hip
+  JOINT_SPINE1: 0.04,  # Spine1
+  JOINT_LEFT_KNEE: 0.05,  # Left knee
+  JOINT_RIGHT_KNEE: 0.05,  # Right knee
+  JOINT_SPINE2: 0.04,  # Spine2
+  JOINT_LEFT_ANKLE: 0.05,  # Left ankle
+  JOINT_RIGHT_ANKLE: 0.05,  # Right ankle
+  JOINT_SPINE3: 0.04,  # Spine3
+  JOINT_LEFT_TOE: 0.05, # Left toe
+  JOINT_RIGHT_TOE: 0.05, # Right toe
+  JOINT_NECK: 0.04, # Neck
+  JOINT_LEFT_COLLAR: 0.05, # Left collar
+  JOINT_RIGHT_COLLAR: 0.05, # Right collar
+  JOINT_HEAD: 0.08, # Head
+  JOINT_LEFT_SHOULDER: 0.05, # Left shoulder
+  JOINT_RIGHT_SHOULDER: 0.05, # Right shoulder
+  JOINT_LEFT_ELBOW: 0.03, # Left elbow
+  JOINT_RIGHT_ELBOW: 0.03, # Right elbow
+  JOINT_LEFT_WRIST: 0.03, # Left wrist
+  JOINT_RIGHT_WRIST: 0.03, # Right wrist
+  JOINT_LEFT_PALM: 0.05, # Left palm
+  JOINT_RIGHT_PALM: 0.05  # Right palm
+}
+
+bone_radius = {
+  BONE_SPINE1: 0.04,
+  BONE_LEFT_THIGH: 0.05,
+  BONE_RIGHT_THIGH: 0.05,
+  BONE_SPINE2: 0.04,
+  BONE_LEFT_SHANK: 0.05,
+  BONE_RIGHT_SHANK: 0.05,
+  BONE_SPINE3: 0.0,
+  BONE_LEFT_FOOT: 0.05,
+  BONE_RIGHT_FOOT: 0.05,
+  BONE_NECK: 0.04,
+  BONE_HEAD: 0.03,
+  BONE_LEFT_SHOULDER: 0.05,
+  BONE_RIGHT_SHOULDER: 0.05,
+  BONE_LEFT_UPPER_ARM: 0.03,
+  BONE_RIGHT_UPPER_ARM: 0.03,
+  BONE_LEFT_LOWER_ARM: 0.03,
+  BONE_RIGHT_LOWER_ARM: 0.03,
+  BONE_LEFT_HAND: 0.03,
+  BONE_RIGHT_HAND: 0.03,
 }

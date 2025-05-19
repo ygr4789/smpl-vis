@@ -170,7 +170,7 @@ def main():
         
     p1_jnts = data.get('input_p1_jnts_list')
     p2_jnts = data.get('input_p2_jnts_list')
-    obj_verts_list = data['filtered_obj_verts_list']
+    obj_verts_list = data['original_obj_verts_list']
 
     plot_joints(p1_jnts, p2_jnts, obj_verts_list)
     # plot_trajectories(obj_verts_list)

@@ -3,13 +3,11 @@ import os
 import argparse
 import sys
 import numpy as np
-import threading
 
-from contextlib import contextmanager
 from blender.camera import prepare_camera_settings
 from blender.const import *
 from blender.prim import *
-from blender.config import setup_render_settings, setup_animation_settings, stdout_redirected
+from blender.config import setup_render_settings, setup_animation_settings, render_animation
 
 def parse_arguments():
     # Get all arguments after "--"
@@ -161,13 +159,13 @@ def create_joints_and_bones(p1_joints, p2_joints):
     # Create bones for p1
     p1_bones = []
     for bone_idx, (joint1, joint2) in bone_pair.items():
-        cone = create_bone_cone(p1_joints[0, joint1], p1_joints[0, joint2], "Red", bone_idx)
+        cone = create_bone_cone(p1_joints[0, joint1], p1_joints[0, joint2], "Red", bone_idx, bone_radius[bone_idx])
         p1_bones.append((cone, joint1, joint2))
         
     # Create bones for p2
     p2_bones = []
     for bone_idx, (joint1, joint2) in bone_pair.items():
-        cone = create_bone_cone(p2_joints[0, joint1], p2_joints[0, joint2], "Blue", bone_idx)
+        cone = create_bone_cone(p2_joints[0, joint1], p2_joints[0, joint2], "Blue", bone_idx, bone_radius[bone_idx])
         p2_bones.append((cone, joint1, joint2))
         
     return p1_spheres, p2_spheres, p1_bones, p2_bones
@@ -230,21 +228,6 @@ def update_bone_position(cone, joint1_pos, joint2_pos, frame):
     
     cone.keyframe_insert(data_path="location", frame=frame)
     cone.keyframe_insert(data_path="rotation_axis_angle", frame=frame)
-
-def render_animation(video_dir, render_target, camera_settings, num_frames):
-    """Render animation from different camera angles"""
-    for camera_setting in camera_settings:
-        video_name = VIDEO_NAMES[render_target] + "_" + camera_setting['text'] + ".mp4"
-        os.makedirs(video_dir, exist_ok=True)
-        bpy.context.scene.render.filepath = os.path.join(video_dir, video_name)
-        bpy.context.scene.camera.location = camera_setting['location']
-        bpy.context.scene.camera.rotation_euler = camera_setting['rotation']
-        
-        print(f"Rendering {num_frames} frames for {camera_setting['text']}...")
-        with stdout_redirected(keyword="Fra:", on_match=lambda line: line[:-1].encode()):
-            bpy.ops.render.render(animation=True)
-        print()
-        print(f"Saved to {video_dir} for {camera_setting['text']}")
 
 def main():
     args = parse_arguments()
