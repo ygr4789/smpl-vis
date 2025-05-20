@@ -2,8 +2,8 @@ import os
 import pickle
 import argparse
 import torch
-import utils.rotation_conversions as geometry
 import matplotlib.pyplot as plt
+import visualize.utils.rotation_conversions as geometry
 
 def slerp(R1, R2, alpha):
     R1_inv = R1.transpose(-2, -1)

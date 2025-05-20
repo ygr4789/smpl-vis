@@ -1,6 +1,13 @@
-data
 __pycache__
+data
 body_models
 cache
 video
 output
+asset
+
+teaser*.blend
+test.blend
+*.blend1
+test.py
+ShapeNet

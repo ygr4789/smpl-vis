@@ -1,6 +1,5 @@
-import numpy as np
 from trimesh import Trimesh
-
+import numpy as np
 from visualize.converter import converter
 
 class converter_vf2obj(converter):

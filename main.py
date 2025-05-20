@@ -1,157 +1,140 @@
-import pickle
-import os
-import numpy as np
-import torch
-
-from visualize.format_sequences import format_joint_sequences
-from visualize.converter_rot2obj import converter_rot2obj
-from visualize.converter_vf2obj import converter_vf2obj
-from visualize.jnt2rot_wrapper import jnt2rot_wrapper
-from blender.const import *
-
 import argparse
+import os
+import subprocess
+from pathlib import Path
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Process motion data file')
-    parser.add_argument('data_file', type=str, help='Path to the data file')
-    return parser.parse_args()
+from visualize.process_pkl import process_pkl_file
+from visualize.const import *
 
+OUTPUT_DIR_PATH = Path(OUTPUT_DIR)
+CACHE_DIR_PATH = Path(CACHE_DIR)
+RESULT_DIR_PATH = Path(VIDEO_DIR)
+RENDER_SMPL_SCRIPT = "blender/render_smpl.py"
+RENDER_PRIM_SCRIPT = "blender/render_prim.py"
 
-def load_data(data_file):
-    with open(data_file, 'rb') as f:
-        data = pickle.load(f, encoding='latin1')
+def render_sequence(script: str, target_flag: int, output_name: str, video_dir: str, camera_no: int, scene_no: int, soft: bool, high: bool) -> None:
+    """Render a sequence using Blender."""
+    cmd = [
+        "blender",
+        BLENDER_PATH,  # Use constant from visualize.const
+        "--background",
+        "--python", script,
+        "--",
+        "-i", str(OUTPUT_DIR_PATH / output_name),
+        "-o", str(video_dir),
+        "-t", str(target_flag),
+        "-c", str(camera_no),
+        "-sc", str(scene_no),
+    ]
+    
+    if soft:
+        cmd.append("-s")
+    if high:
+        cmd.append("-q")
         
-    p1_jnts_input = data[KEY_INPUT_P1_JNTS]
-    p2_jnts_input = data[KEY_INPUT_P2_JNTS]
-    obj_verts_list_original = data[KEY_ORIGINAL_OBJ_VERTS]
-    p1_jnts_refine = data[KEY_REFINE_P1_JNTS]
-    p2_jnts_refine = data[KEY_REFINE_P2_JNTS]
-    obj_verts_list_filtered = data[KEY_FILTERED_OBJ_VERTS]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.getcwd()
+    subprocess.run(cmd, check=True, env=env)
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Build and render SMPL meshes")
+    parser.add_argument("-i", "--input", type=str, required=True, help=".pkl file or path to data directory (when using -a)")
+    parser.add_argument("-a", "--ablation", action="store_true", help="Ablation dataset rendering")
+    parser.add_argument("-g", "--gt", action="store_true", help="GT dataset rendering")
+    
+    parser.add_argument('-c', '--camera', type=int, help='Camera number, -1 for all cameras', default=-1)
+    parser.add_argument('-sc', '--scene', type=int, help='Scene number, default=0 for no furnitures', default=0)
+    parser.add_argument('-s', '--soft', action='store_true', help='Use soft material')
+    parser.add_argument('-q', '--high', action='store_true', help='Use high quality rendering settings')
+    parser.add_argument('-p', '--prim', action='store_true', help='Use primitive rendering')
+    
+    args = parser.parse_args()
+    input_path = args.input
+    ablation = args.ablation
+    gt = args.gt
+    
+    camera_no = args.camera
+    scene_no = args.scene
+    soft = args.soft
+    high = args.high
+    prim = args.prim
+    
+    # Create necessary directories
+    OUTPUT_DIR_PATH.mkdir(exist_ok=True)
+    CACHE_DIR_PATH.mkdir(exist_ok=True)
+    RESULT_DIR_PATH.mkdir(exist_ok=True)
+
+    if not input_path:
+        print("Error: Input path (-i/--input) is required")
+        return
+
+    input_path = Path(input_path)
+    video_dir = os.path.join(RESULT_DIR_PATH, ('smpl_' if not prim else 'prim_') + input_path.stem)
+    
+    # if os.path.exists(video_dir):
+    #     print(f"Video directory already exists: {video_dir}")
+    #     return
+    
+    script = RENDER_SMPL_SCRIPT if not prim else RENDER_PRIM_SCRIPT
+    
+    if input_path.is_file():
+        if input_path.suffix != '.pkl':
+            print(f"Error: {input_path} is not a .pkl file")
+            return
+        if ablation:
+            print(f"Error: Ablation mode is not supported for single file rendering")
+            return
         
-    p1_jnts_input = p1_jnts_input.numpy() if torch.is_tensor(p1_jnts_input) else p1_jnts_input
-    p2_jnts_input = p2_jnts_input.numpy() if torch.is_tensor(p2_jnts_input) else p2_jnts_input
-    obj_verts_list_original = obj_verts_list_original.numpy() if torch.is_tensor(obj_verts_list_original) else obj_verts_list_original
-    p1_jnts_refine = p1_jnts_refine.numpy() if torch.is_tensor(p1_jnts_refine) else p1_jnts_refine
-    p2_jnts_refine = p2_jnts_refine.numpy() if torch.is_tensor(p2_jnts_refine) else p2_jnts_refine
-    obj_verts_list_filtered = obj_verts_list_filtered.numpy() if torch.is_tensor(obj_verts_list_filtered) else obj_verts_list_filtered
-    
-    obj_faces_list = data[KEY_OBJ_FACES]
-    data_type = data[KEY_TYPE]
-    cam_T = data[KEY_CAM_T]
-    
-    return p1_jnts_input, p2_jnts_input, obj_verts_list_original, p1_jnts_refine, p2_jnts_refine, obj_verts_list_filtered, obj_faces_list, data_type, cam_T
-
-
-def setup_directories(data_file):
-    output_dir = os.path.join("output", os.path.splitext(os.path.basename(data_file))[0])
-    
-    p1_input_dir = os.path.join(output_dir, OBJ_P1_INPUT)
-    p2_input_dir = os.path.join(output_dir, OBJ_P2_INPUT) 
-    obj_original_dir = os.path.join(output_dir, OBJ_OBJ_ORIGINAL)
-    p1_refine_dir = os.path.join(output_dir, OBJ_P1_REFINE)
-    p2_refine_dir = os.path.join(output_dir, OBJ_P2_REFINE)
-    obj_filtered_dir = os.path.join(output_dir, OBJ_OBJ_FILTERED)
-    
-    os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(p1_input_dir, exist_ok=True)
-    os.makedirs(p2_input_dir, exist_ok=True)
-    os.makedirs(obj_original_dir, exist_ok=True)
-    os.makedirs(p1_refine_dir, exist_ok=True)
-    os.makedirs(p2_refine_dir, exist_ok=True)
-    os.makedirs(obj_filtered_dir, exist_ok=True)
-    
-    return output_dir, p1_input_dir, p2_input_dir, obj_original_dir, p1_refine_dir, p2_refine_dir, obj_filtered_dir
-
-
-def get_converters(data_dict, data_file):
-    cache_dir = CACHE_DIR
-    cache_file = os.path.join(cache_dir, data_file.split('/')[-1].split('.')[0] + CACHE_SUFFIX)
-
-    if os.path.exists(cache_file):
-        with open(cache_file, 'rb') as f:
-            converters = pickle.load(f)
-            motion_tensor_1_input, motion_tensor_2_input, motion_tensor_1_refine, motion_tensor_2_refine = converters
-    else:
-        motion_tensor_1_input = jnt2rot_wrapper(data_dict, sample_idx=0, device=0, cuda=True).get_motion_tensor()
-        motion_tensor_2_input = jnt2rot_wrapper(data_dict, sample_idx=1, device=0, cuda=True).get_motion_tensor()
-        motion_tensor_1_refine = jnt2rot_wrapper(data_dict, sample_idx=2, device=0, cuda=True).get_motion_tensor()
-        motion_tensor_2_refine = jnt2rot_wrapper(data_dict, sample_idx=3, device=0, cuda=True).get_motion_tensor()
-        os.makedirs(cache_dir, exist_ok=True)
-        with open(cache_file, 'wb') as f:
-            pickle.dump((motion_tensor_1_input, motion_tensor_2_input, motion_tensor_1_refine, motion_tensor_2_refine), f)
-        
-    converter1_input = converter_rot2obj(motion_tensor_1_input, interpolate=INTERPOLATE, device=0, cuda=True)
-    converter2_input = converter_rot2obj(motion_tensor_2_input, interpolate=INTERPOLATE, device=0, cuda=True)
-    converter1_refine = converter_rot2obj(motion_tensor_1_refine, interpolate=INTERPOLATE, device=0, cuda=True)
-    converter2_refine = converter_rot2obj(motion_tensor_2_refine, interpolate=INTERPOLATE, device=0, cuda=True)
+        if gt:
+            process_pkl_file(str(input_path), keys_to_process_per_flag['gt'])
+            render_sequence(script, TARGET_FLAG_GT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, scene_no, False, high)
+        else:
+            process_pkl_file(str(input_path), keys_to_process_per_flag['default'])
+            render_sequence(script, TARGET_FLAG_NONE, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, scene_no, False, high)
             
-    return converter1_input, converter2_input, converter1_refine, converter2_refine
-
-
-def convert_to_blender_coordinates(data):
-    data[..., [1, 2]] = data[..., [2, 1]]
-    data[..., 1] *= -1
-    return data
-
-def save_obj_files(dirs, converters):
-    num_frames = min([converter.num_frames for converter in converters])
-    for frame_i in range(num_frames):
-        for dir_path, converter in zip(dirs, converters):
-            obj_path = os.path.join(dir_path, f"frame_{frame_i:04d}.obj")
-            converter.save_obj(obj_path, frame_i)
+    elif input_path.is_dir():
+        if ablation:
+            pkl_suffixes = ['_all.pkl', '_wocontact.pkl', '_woprox.pkl', '_woig.pkl', '_wopose.pkl']
+            pkl_files = []
+            for suffix in pkl_suffixes:
+                matching_files = list(input_path.glob(f'*{suffix}'))
+                if not matching_files:
+                    print(f"Error: No files found ending with suffix: {suffix}")
+                    return
+                if len(matching_files) > 1:
+                    print(f"Error: Multiple files found ending with suffix: {suffix}")
+                    return
+                pkl_files.extend(matching_files)
+                    
+            file_all = pkl_files[0]
+            file_wocontact = pkl_files[1]
+            file_woprox = pkl_files[2]
+            file_woig = pkl_files[3]
+            file_wopose = pkl_files[4]
+            
+            process_pkl_file(str(file_all), keys_to_process_per_flag['ab_all'])
+            for file_wo in [file_wocontact, file_woprox, file_woig, file_wopose]:
+                process_pkl_file(str(file_wo), keys_to_process_per_flag['ab_wo'])
+            
+            render_sequence(script, TARGET_FLAG_GT, file_all.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_PSEUDO_GT, file_all.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_REFINE_PSEUDO_GT, file_all.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOCONTACT, file_wocontact.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOPROX, file_woprox.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOIG, file_woig.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOPOSE, file_wopose.stem, video_dir, camera_no, scene_no, False, high)
+            
+        else:
+            print("Error: Directory input is only available with ablation mode (-a/--ablation)")
+            return
         
-        progress = (frame_i + 1) / num_frames * 100
-        print(f"\rSaving frames: [{('=' * int(progress/2)).ljust(50)}] {progress:.1f}%", end='', flush=True)
-    print() # New line after progress bar completes
-
-
-def save_info(output_dir, data_type, root_loc1, root_loc2, cam_T):
-    root_loc1 = convert_to_blender_coordinates(root_loc1)
-    root_loc2 = convert_to_blender_coordinates(root_loc2)
-    
-    info = {
-        INFO_ROOT_LOC_P1: root_loc1,
-        INFO_ROOT_LOC_P2: root_loc2,
-        INFO_TYPE: data_type,
-        INFO_CAM: cam_T
-    }
-    np.save(os.path.join(output_dir, INFO_FILE_NAME), info)
-    
-
-def main():
-    args = parse_args()
-    data_file = args.data_file
-
-    # Load data
-    p1_jnts_input, p2_jnts_input, obj_verts_list_original, p1_jnts_refine, p2_jnts_refine, obj_verts_list_filtered, obj_faces_list, data_type, cam_T = load_data(data_file)
-    
-    # Format sequences
-    data_dict = format_joint_sequences(p1_jnts_input, p2_jnts_input, p1_jnts_refine, p2_jnts_refine)
-    
-    # Setup Converters
-    converter1_input, converter2_input, converter1_refine, converter2_refine = get_converters(data_dict, data_file)
-    converter_obj_original = converter_vf2obj(obj_verts_list_original, obj_faces_list, interpolate=INTERPOLATE)
-    converter_obj_filtered = converter_vf2obj(obj_verts_list_filtered, obj_faces_list, interpolate=INTERPOLATE)
-    converters = [converter1_input, converter2_input, converter1_refine, converter2_refine, converter_obj_original, converter_obj_filtered]
-    
-    # Setup directories
-    output_dir, p1_input_dir, p2_input_dir, obj_original_dir, p1_refine_dir, p2_refine_dir, obj_filtered_dir = setup_directories(data_file)
-    dirs = [p1_input_dir, p2_input_dir, p1_refine_dir, p2_refine_dir, obj_original_dir, obj_filtered_dir]
-    
-    save_obj_files(dirs, converters)
-    save_info(output_dir, data_type, converter1_input.get_traj(), converter2_input.get_traj(), cam_T)
-    
-    prim_npz_path = os.path.join(output_dir, PRIM_FILE_NAME)
-    # Save data as npz file
-    np.savez(prim_npz_path,
-             **{KEY_INPUT_P1_JNTS: convert_to_blender_coordinates(p1_jnts_input),
-                KEY_INPUT_P2_JNTS: convert_to_blender_coordinates(p2_jnts_input),
-                KEY_ORIGINAL_OBJ_VERTS: convert_to_blender_coordinates(obj_verts_list_original),
-                KEY_REFINE_P1_JNTS: convert_to_blender_coordinates(p1_jnts_refine),
-                KEY_REFINE_P2_JNTS: convert_to_blender_coordinates(p2_jnts_refine),
-                KEY_FILTERED_OBJ_VERTS: convert_to_blender_coordinates(obj_verts_list_filtered),
-                KEY_OBJ_FACES: obj_faces_list,
-                KEY_TYPE: data_type})
+    else:
+        print(f"Error: {input_path} does not exist")
+        return
 
 if __name__ == "__main__":
-    main()
+    main() 
