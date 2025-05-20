@@ -144,15 +144,19 @@ def process_pkl_file(data_file, keys_to_process=None, skip_smplify=False):
             save_info(output_dir,
                     converters[p1_keys[0]].get_traj(),
                     converters[p2_keys[0]].get_traj())
-                    
+        else:
+            raise ValueError(f"No p1 or p2 keys found for {data_file}")
+            
     else:
         p1_keys = [k for k in data_dict.keys() if 'p1' in k.lower()]
         p2_keys = [k for k in data_dict.keys() if 'p2' in k.lower()]
         
         if p1_keys and p2_keys:
             save_info(output_dir,
-                    data_dict[p1_keys[0]][0],
-                    data_dict[p2_keys[0]][0])
+                    data_dict[p1_keys[0]][:,0],
+                    data_dict[p2_keys[0]][:,0])
+        else:
+            raise ValueError(f"No p1 or p2 keys found for {data_file}")
     
     # Save data as npz file
     prim_npz_path = os.path.join(output_dir, PRIM_FILE_NAME)
