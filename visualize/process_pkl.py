@@ -110,7 +110,7 @@ def save_info(output_dir, root_loc1, root_loc2):
     np.save(info_path, info)
 
 
-def process_pkl_file(data_file, keys_to_process=None):
+def process_pkl_file(data_file, keys_to_process=None, skip_smplify=False):
     if keys_to_process is None:
         keys_to_process = [KEY_INPUT_P1_JNTS, KEY_INPUT_P2_JNTS, KEY_ORIGINAL_OBJ_VERTS,
                           KEY_REFINE_P1_JNTS, KEY_REFINE_P2_JNTS, KEY_FILTERED_OBJ_VERTS]
@@ -127,24 +127,32 @@ def process_pkl_file(data_file, keys_to_process=None):
         if key not in data_dict:
             data_dict[key] = data[key]
     
-    # Setup converters
-    print(f"Running SMPLify for {data_file}...")
-    converters = get_converters(data_dict, data_file, keys_to_process)
-    
     # Setup directories
     output_dir, dirs = setup_directories(data_file, keys_to_process)
     
-    # Save obj files
-    save_obj_files(dirs, converters)
+    # Setup converters
+    if not skip_smplify:
+        print(f"Running SMPLify for {data_file}...")
+        converters = get_converters(data_dict, data_file, keys_to_process)
+        # Save obj files
+        save_obj_files(dirs, converters)
+        # Save trajectory info if we have p1/p2 input joints
+        p1_keys = [k for k in converters.keys() if 'p1' in k.lower()]
+        p2_keys = [k for k in converters.keys() if 'p2' in k.lower()]
     
-    # Save trajectory info if we have p1/p2 input joints
-    p1_keys = [k for k in converters.keys() if 'p1' in k.lower()]
-    p2_keys = [k for k in converters.keys() if 'p2' in k.lower()]
-    
-    if p1_keys and p2_keys:
-        save_info(output_dir,
-                  converters[p1_keys[0]].get_traj(),
-                  converters[p2_keys[0]].get_traj())
+        if p1_keys and p2_keys:
+            save_info(output_dir,
+                    converters[p1_keys[0]].get_traj(),
+                    converters[p2_keys[0]].get_traj())
+                    
+    else:
+        p1_keys = [k for k in data_dict.keys() if 'p1' in k.lower()]
+        p2_keys = [k for k in data_dict.keys() if 'p2' in k.lower()]
+        
+        if p1_keys and p2_keys:
+            save_info(output_dir,
+                    data_dict[p1_keys[0]][0],
+                    data_dict[p2_keys[0]][0])
     
     # Save data as npz file
     prim_npz_path = os.path.join(output_dir, PRIM_FILE_NAME)

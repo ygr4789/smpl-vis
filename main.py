@@ -86,12 +86,12 @@ def main() -> None:
             return
         
         if gt:
-            process_pkl_file(str(input_path), keys_to_process_per_flag['gt'])
+            process_pkl_file(str(input_path), keys_to_process_per_flag['gt'], prim)
             render_sequence(script, TARGET_FLAG_GT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
             render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
             render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, scene_no, False, high)
         else:
-            process_pkl_file(str(input_path), keys_to_process_per_flag['default'])
+            process_pkl_file(str(input_path), keys_to_process_per_flag['default'], prim)
             render_sequence(script, TARGET_FLAG_NONE, input_path.stem, video_dir, camera_no, scene_no, soft, high)
             render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
             render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, scene_no, False, high)
@@ -116,9 +116,9 @@ def main() -> None:
             file_woig = pkl_files[3]
             file_wopose = pkl_files[4]
             
-            process_pkl_file(str(file_all), keys_to_process_per_flag['ab_all'])
+            process_pkl_file(str(file_all), keys_to_process_per_flag['ab_all'], prim)
             for file_wo in [file_wocontact, file_woprox, file_woig, file_wopose]:
-                process_pkl_file(str(file_wo), keys_to_process_per_flag['ab_wo'])
+                process_pkl_file(str(file_wo), keys_to_process_per_flag['ab_wo'], prim)
             
             render_sequence(script, TARGET_FLAG_GT, file_all.stem, video_dir, camera_no, scene_no, soft, high)
             render_sequence(script, TARGET_FLAG_PSEUDO_GT, file_all.stem, video_dir, camera_no, scene_no, soft, high)
