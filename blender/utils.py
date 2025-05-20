@@ -144,14 +144,11 @@ def setup_low_quality_settings():
     
     if bpy.app.version >= (4, 2, 0):
         bpy.context.scene.render.engine = 'BLENDER_EEVEE_NEXT'
-        bpy.context.scene.render.resolution_x = 3840
-        bpy.context.scene.render.resolution_y = 2160
+        bpy.context.scene.render.resolution_x = 1920
+        bpy.context.scene.render.resolution_y = 1080
         bpy.context.scene.render.resolution_percentage = 100
     else:
         bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-        # bpy.context.scene.render.resolution_x = 1920
-        # bpy.context.scene.render.resolution_y = 1080
-        # bpy.context.scene.render.resolution_percentage = 100
         bpy.context.scene.render.resolution_x = 1280
         bpy.context.scene.render.resolution_y = 720
         bpy.context.scene.render.resolution_percentage = 50
@@ -173,17 +170,13 @@ def setup_low_quality_settings():
 def setup_high_quality_settings():
     """Configure settings for high-quality rendering"""
     bpy.context.scene.render.engine = 'CYCLES'
-    # bpy.context.scene.cycles.samples = 1024
-    bpy.context.scene.cycles.samples = 256
+    bpy.context.scene.cycles.samples = 1024
     bpy.context.scene.cycles.use_denoising = False # device issue
     bpy.context.scene.cycles.use_adaptive_sampling = True
     bpy.context.scene.cycles.adaptive_threshold = 0.1
-    # bpy.context.scene.render.resolution_x = 1920
-    # bpy.context.scene.render.resolution_y = 1080
-    # bpy.context.scene.render.resolution_percentage = 100
-    bpy.context.scene.render.resolution_x = 1280
-    bpy.context.scene.render.resolution_y = 720
-    bpy.context.scene.render.resolution_percentage = 50
+    bpy.context.scene.render.resolution_x = 1920
+    bpy.context.scene.render.resolution_y = 1080
+    bpy.context.scene.render.resolution_percentage = 100
     bpy.context.scene.use_nodes = False
     bpy.context.scene.render.use_compositing = True
     bpy.context.scene.render.use_sequencer = True

@@ -1,7 +1,5 @@
 # Script paths
 MAIN_SCRIPT := main.py
-RENDER_SMPL_SCRIPT := blender/render_smpl.py
-RENDER_PRIM_SCRIPT := blender/render_prim.py
 
 # Directory paths
 DATA_DIR := data
