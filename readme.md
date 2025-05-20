@@ -10,35 +10,52 @@ Prepare model files
 bash prepare/download_smpl_files.sh
 ```
 
+Download asset files from [here](https://drive.google.com/drive/folders/1MJUo716mliacY3s8sZgdoHS2oOTJUo-D?usp=drive_link),
+should be located in `blender/asset`
+
+Pleas check materials properly applied in `blender/scene.blender`
+
+
 ## Instruction
-This command will create `.obj` files in the `output/sample` folder.
-```
-python main.py data/sample.pkl
-```
 
-blender command in blender 4:
-```
-PYTHONPATH=$PWD blender --background --python blender/render_smpl.py -- output/sample
-PYTHONPATH=$PWD blender --background --python blender/render_prim.py -- output/sample
-```
-The script accepts the following flags:
-
-- `-t, --target`: Render target mode (default=2)
-  - 0: Object only - Renders just the object mesh
-  - 1: Input motion - Renders object mesh with input motion
-  - 2: Refined motion - Renders object mesh with refined motion
-
-- `-c, --camera`: Camera angle selection (default=-1)
-  - -1: Renders from all camera angles
-  - 0-11: Renders from specific camera angle (see camera.py for angles)
-
-- `-q, --high`: Enable high quality rendering
-  - Uses Cycles renderer
-  - Slower but better quality
-
-Example commands
+The following command will execute SMPLify, export to an obj file, and render a pkl file all at once.
 
 ```
-PYTHONPATH=$PWD blender --background --python blender/render_smpl.py -- output/sample -t 1 -c 0 -q
+python main.py -i data/sample.pkl
 ```
 
+SMPL parameters and obj files will be stored in `cache` and `output` directories respectively. If these files already exist, the intermediate processing steps will be skipped.
+
+### Command Line Arguments
+
+| Flag | Description |
+|------|-------------|
+| `-i, --input` | Path to input .pkl file or data directory (required) |
+| `-a, --ablation` | Enable ablation dataset rendering |
+| `-g, --gt` | Enable GT dataset rendering |
+| `-c, --camera` | Camera number (-1 for all cameras, default=-1) |
+| `-sc, --scene` | Scene number (0 for no furniture, default=0) |
+| `-s, --soft` | Enable soft material rendering |
+| `-q, --high` | Enable high quality rendering settings |
+| `-p, --prim` | Enable primitive rendering |
+
+
+### Example Command
+```
+python main.py -i data/sample.pkl -c 1 -sc 1 -s -q -p
+```
+### Prepared Scenes
+
+Scene 0: Empty room
+
+Scene 1
+![Scene 1](images/Scene1.png)
+
+Scene 2
+![Scene 2](images/Scene2.png)
+
+Scene 3
+![Scene 3](images/Scene3.png)
+
+Scene 4
+![Scene 4](images/Scene4.png)

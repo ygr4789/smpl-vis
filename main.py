@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import os
 import subprocess
@@ -8,14 +6,13 @@ from pathlib import Path
 from visualize.process_pkl import process_pkl_file
 from visualize.const import *
 
-# Constants (matching Makefile)
 OUTPUT_DIR_PATH = Path(OUTPUT_DIR)
 CACHE_DIR_PATH = Path(CACHE_DIR)
 RESULT_DIR_PATH = Path(VIDEO_DIR)
 RENDER_SMPL_SCRIPT = "blender/render_smpl.py"
 RENDER_PRIM_SCRIPT = "blender/render_prim.py"
 
-def render_sequence(script: str, target_flag: int, output_name: str, video_dir: str, camera_no: int, soft: bool, high: bool) -> None:
+def render_sequence(script: str, target_flag: int, output_name: str, video_dir: str, camera_no: int, scene_no: int, soft: bool, high: bool) -> None:
     """Render a sequence using Blender."""
     cmd = [
         "blender",
@@ -27,6 +24,7 @@ def render_sequence(script: str, target_flag: int, output_name: str, video_dir: 
         "-o", str(video_dir),
         "-t", str(target_flag),
         "-c", str(camera_no),
+        "-sc", str(scene_no),
     ]
     
     if soft:
@@ -45,6 +43,7 @@ def main() -> None:
     parser.add_argument("-g", "--gt", action="store_true", help="GT dataset rendering")
     
     parser.add_argument('-c', '--camera', type=int, help='Camera number, -1 for all cameras', default=-1)
+    parser.add_argument('-sc', '--scene', type=int, help='Scene number, default=0 for no furnitures', default=0)
     parser.add_argument('-s', '--soft', action='store_true', help='Use soft material')
     parser.add_argument('-q', '--high', action='store_true', help='Use high quality rendering settings')
     parser.add_argument('-p', '--prim', action='store_true', help='Use primitive rendering')
@@ -55,6 +54,7 @@ def main() -> None:
     gt = args.gt
     
     camera_no = args.camera
+    scene_no = args.scene
     soft = args.soft
     high = args.high
     prim = args.prim
@@ -69,7 +69,7 @@ def main() -> None:
         return
 
     input_path = Path(input_path)
-    video_dir = os.path.join(RESULT_DIR_PATH, 'smpl_' + input_path.stem)
+    video_dir = os.path.join(RESULT_DIR_PATH, ('smpl_' if not prim else 'prim_') + input_path.stem)
     
     # if os.path.exists(video_dir):
     #     print(f"Video directory already exists: {video_dir}")
@@ -87,14 +87,14 @@ def main() -> None:
         
         if gt:
             process_pkl_file(str(input_path), keys_to_process_per_flag['gt'])
-            render_sequence(script, TARGET_FLAG_GT, input_path.stem, video_dir, camera_no, soft, high)
-            render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, soft, high)
-            render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, False, high)
+            render_sequence(script, TARGET_FLAG_GT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, scene_no, False, high)
         else:
             process_pkl_file(str(input_path), keys_to_process_per_flag['default'])
-            render_sequence(script, TARGET_FLAG_NONE, input_path.stem, video_dir, camera_no, soft, high)
-            render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, soft, high)
-            render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, False, high)
+            render_sequence(script, TARGET_FLAG_NONE, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_INPUT, input_path.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_REFINE, input_path.stem, video_dir, camera_no, scene_no, False, high)
             
     elif input_path.is_dir():
         if ablation:
@@ -120,13 +120,13 @@ def main() -> None:
             for file_wo in [file_wocontact, file_woprox, file_woig, file_wopose]:
                 process_pkl_file(str(file_wo), keys_to_process_per_flag['ab_wo'])
             
-            render_sequence(script, TARGET_FLAG_GT, file_all.stem, video_dir, camera_no, soft, high)
-            render_sequence(script, TARGET_FLAG_PSEUDO_GT, file_all.stem, video_dir, camera_no, soft, high)
-            render_sequence(script, TARGET_FLAG_REFINE_PSEUDO_GT, file_all.stem, video_dir, camera_no, False, high)
-            render_sequence(script, TARGET_FLAG_WOCONTACT, file_wocontact.stem, video_dir, camera_no, False, high)
-            render_sequence(script, TARGET_FLAG_WOPROX, file_woprox.stem, video_dir, camera_no, False, high)
-            render_sequence(script, TARGET_FLAG_WOIG, file_woig.stem, video_dir, camera_no, False, high)
-            render_sequence(script, TARGET_FLAG_WOPOSE, file_wopose.stem, video_dir, camera_no, False, high)
+            render_sequence(script, TARGET_FLAG_GT, file_all.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_PSEUDO_GT, file_all.stem, video_dir, camera_no, scene_no, soft, high)
+            render_sequence(script, TARGET_FLAG_REFINE_PSEUDO_GT, file_all.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOCONTACT, file_wocontact.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOPROX, file_woprox.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOIG, file_woig.stem, video_dir, camera_no, scene_no, False, high)
+            render_sequence(script, TARGET_FLAG_WOPOSE, file_wopose.stem, video_dir, camera_no, scene_no, False, high)
             
         else:
             print("Error: Directory input is only available with ablation mode (-a/--ablation)")
