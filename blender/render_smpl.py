@@ -1,7 +1,9 @@
 import bpy
 import os
 import numpy as np
-
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from blender.camera import prepare_camera_settings
 from blender.utils import setup_render_settings, setup_animation_settings, stdout_redirected, render_animation, cleanup_existing_objects, parse_arguments, setup_keyframes, load_info, setup_background_scene
 from visualize.const import *
