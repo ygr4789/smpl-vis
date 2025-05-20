@@ -107,7 +107,8 @@ def setup_background_scene(scene_no):
         print("Warning: 'Scenes' collection not found")
         return
     if f'Scene{scene_no}' not in [c.name for c in scenes_collection.children]:
-        print(f"Warning: 'Scene{scene_no}' not found in 'Scenes' collection")
+        if scene_no != 0:
+            print(f"Warning: 'Scene{scene_no}' not found in 'Scenes' collection")
         return
     
     background_objects = []

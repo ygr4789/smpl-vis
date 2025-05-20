@@ -203,6 +203,8 @@ def prepare_render_data(data, render_target):
     if len(vert_keys) != 1:
         raise ValueError(f"Expected exactly one vert list key, found {len(vert_keys)}: {vert_keys}")
     verts_list = data[vert_keys[0]]
+    num_frames = len(verts_list)
+    
     obj_faces_list = data[KEY_OBJ_FACES]
     
     p1_joints = None
@@ -219,8 +221,7 @@ def prepare_render_data(data, render_target):
             
         p1_joints = data[p1_keys[0]]
         p2_joints = data[p2_keys[0]]
-    
-    num_frames = min(len(verts_list), len(p1_joints), len(p2_joints))
+        num_frames = min(num_frames,len(p1_joints), len(p2_joints))
     
     return verts_list, obj_faces_list, p1_joints, p2_joints, num_frames
 

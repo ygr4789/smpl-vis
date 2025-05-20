@@ -168,8 +168,8 @@ def main():
     with open(args.data_file, 'rb') as f:
         data = pickle.load(f, encoding='latin1')
         
-    p1_jnts = data.get('gt_p1_jnts_list')
-    p2_jnts = data.get('gt_p2_jnts_list')
+    p1_jnts = data.get('input_p1_jnts_list')
+    p2_jnts = data.get('input_p2_jnts_list')
     obj_verts_list = data['original_obj_verts_list']
 
     plot_joints(p1_jnts, p2_jnts, obj_verts_list)

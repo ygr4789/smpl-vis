@@ -21,7 +21,7 @@ def load_data(data_file, keys_to_process):
             value = data[key]
             if torch.is_tensor(value):
                 value = value.numpy()
-            loaded_data[key] = value
+            loaded_data[key] = value.copy()
         else:
             raise KeyError(f"Required key '{key}' not found in '{data_file}'")
     
@@ -153,14 +153,16 @@ def process_pkl_file(data_file, keys_to_process=None, skip_smplify=False):
         
         if p1_keys and p2_keys:
             save_info(output_dir,
-                    data_dict[p1_keys[0]][:,0],
-                    data_dict[p2_keys[0]][:,0])
+                    data_dict[p1_keys[0]][:,0].copy(),
+                    data_dict[p2_keys[0]][:,0].copy())
         else:
             raise ValueError(f"No p1 or p2 keys found for {data_file}")
     
     # Save data as npz file
     prim_npz_path = os.path.join(output_dir, PRIM_FILE_NAME)
+    
     npz_data = {key: convert_to_blender_coordinates(data[key]) for key in keys_to_process if key in data}
+    # npz_data = {key: data[key] for key in keys_to_process if key in data}
     npz_data[KEY_OBJ_FACES] = data[KEY_OBJ_FACES]
     np.savez(prim_npz_path, **npz_data)
     
