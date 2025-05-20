@@ -1,3 +1,7 @@
+# Joint Positions to SMPL/PRIM Visualizer
+
+![Teaser](images/Teaser.png)
+
 ## Dependencies
 Create a micromamba env with the following command
 ```
