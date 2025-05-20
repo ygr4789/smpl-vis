@@ -248,7 +248,7 @@ def main():
     
     # Prepare render data
     verts_list, obj_faces_list, p1_joints, p2_joints, num_frames = prepare_render_data(data, render_target)
-    materials = ["Yellow", "Red", "Blue"] if not soft else ["Yellow", "Red", "Blue"]
+    materials = ["Yellow", "Red", "Blue"] if not soft else ["Yellow_soft", "Red_soft", "Blue_soft"]
         
     setup_animation_settings(num_frames*2-1)
     

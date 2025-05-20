@@ -26,7 +26,7 @@ def import_and_setup_frame(obj_paths, files, materials, frame_num):
 
 def prepare_obj_paths_and_materials(obj_folder, render_target, soft):
     objs = [key_path_map[key] for key in keys_to_render_per_flag[render_target]]
-    materials = ["Yellow", "Red", "Blue"] if not soft else ["Yellow", "Red", "Blue"]
+    materials = ["Yellow", "Red", "Blue"] if not soft else ["Yellow_soft", "Red_soft", "Blue_soft"]
     materials = materials[:len(objs)]
     
     obj_paths = [os.path.join(obj_folder, obj) for obj in objs]
